@@ -1,6 +1,15 @@
 <tt ?position>
     <head ?position>
-        ?position
+        <metadata 
+            xml:space !- this element might affect positioning:
+                >>> http://www.w3.org/TR/ttaf1-dfxp/#content-attribute-space
+                >>> http://www.w3.org/TR/2008/REC-xml-20081126/#sec-white-space
+                >>> this handles whitespace processing in xml files, namely it
+                >>> specifies whether it should be ignored (requiring explicit <br/>
+                >>> for example, or being considered
+            >
+        </metadata>
+
     <head>
 
     <body ?position>
