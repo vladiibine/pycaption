@@ -19,14 +19,49 @@
             <style xml:id=id_definition_1
                 ?
                 xml:direction ="ltr"|"rtl"    (used in p, span)
+
+                >>>!!!!!!!!!! these next attributes can be found 
                 tts:display= "auto"|"none" ? smth with being(or not_ displayed in "regions"
+                    >>> http://www.w3.org/TR/ttaf1-dfxp/#style-attribute-display  <- example?
+                    >>>used in: body, div, p, region, span
+                    !!! this will be buggy...
+                tts:displayAlign="before"|"after"|"center"
+                    >>> used in:region   (can be specified in a lot of elems)
+                tt:extent="auto" |"<length> <length>"
+                    >>>used in: tt, region
+                        >>>if not used in tt, it must be equal to the Related Media Object Region
+                        >>>!!!!!! IF USED IN TT, then it must be specified as fixed pixel units
+                
+            >...</style>
+
+            <style style=@id_previously_defined_with_xml_id_attribute>...</style>
 
         </styling>
 
     <head>
 
-    <body ?position>
+    <body 
+        style=#id_reference_1   !- refers a style defined in <styling><style xml:id=id_1></style></styling>
+            >>>which can contain positioning info
+            >>> ref: http://www.w3.org/TR/ttaf1-dfxp/#style-attribute-style
+        ?position>
         ?position
+        ... 
+        <div style=#id_reference_n>...</div>
+        <p style=#id_reference_n>...</p>
+        <region style=#id_reference_n
+                tts:origin="auto"|"<length> <length>"  !- can be specified in absolute or relative way (%)
+                tts:padding=...   !- i think it does count as positioning.... 
+                    >>> let's only implement the origin X,Y part of it
+                tts:textAllign=left|center|right|start|end !- already implemented for DFXP? - should be anyway
+                tts:writingMode=lrtb|rltb|tbrl|tblr|lr|rl|tb
+                    >>> ca daca poa sa scris vertical, sau de la dreapta la stnga etc.
+        >...</region>
+
+        <!-- not sure if style elements can be in the body -->
+        <style style=#id_reference_n> ... </style>
+
+        
     </body>
 
 </tt>
