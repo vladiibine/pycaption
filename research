@@ -8,7 +8,20 @@
                 >>> specifies whether it should be ignored (requiring explicit <br/>
                 >>> for example, or being considered
             >
+              >>>?it can contain children which also specify info to be applied
+              >>> to the whole document, so they might influence positioning as well.
         </metadata>
+
+        <styling xml:space !- sameobservations>
+            <metadata !- same observations> 
+            </medatada>
+
+            <style xml:id=id_definition_1
+                ?
+                xml:direction ="ltr"|"rtl"    (used in p, span)
+                tts:display= "auto"|"none" ? smth with being(or not_ displayed in "regions"
+
+        </styling>
 
     <head>
 
