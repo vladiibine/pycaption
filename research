@@ -38,6 +38,16 @@
 
         </styling>
 
+        <layout>
+            <metadata !-same observation>...</metadata>
+            *<region
+                style=@id_de_stil
+                xml:id=#definitie_de_id_de_region
+                tts:origin=auto| "<length> <length"
+                ...any attribs in the TTstyle namespace ->deci alea cu pozitionare, gen origin si extent
+            >
+        </layout>
+
     <head>
 
     <body 
