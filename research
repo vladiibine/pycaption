@@ -1,5 +1,7 @@
-<tt ?position>
-    <head ?position>
+<tt 
+    tts:extend !- if specified here, MUST be position expressed in pixels
+    >
+    <head >
         <metadata 
             xml:space !- this element might affect positioning:
                 >>> http://www.w3.org/TR/ttaf1-dfxp/#content-attribute-space
@@ -47,7 +49,6 @@
                 ...any attribs in the TTstyle namespace ->deci alea cu pozitionare, gen origin si extent
             >
         </layout>
-
     <head>
 
     <body 
