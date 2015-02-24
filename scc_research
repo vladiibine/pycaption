@@ -1,0 +1,20 @@
+3 types of SCC captions:
+    Roll-Up
+    Paint-On
+    Pop-On
+
+Commands:
+    94ae - Erase Non-displayed(buffer) Memory [ENM]
+    942c - Erase Displayed Memory [EDM]
+    9420 - Resume Caption Loading [RCL]
+    8080 - filler to time out the frames until caption needs to be displayed ??
+    97a1, 97a2, 9723 - move 1, 2 or 3 columns - Tab Over command [TO]
+    942f - display the buffer on the screen - End Of Caption [EOC]
+
+
+Pop-On:
+    1. 94ae (erase non displayed memory)
+    2. 9420 (resume caption loading => this command here means we're using Pop-On captions)
+    3. Positioning/ styling command (can position on columns divisible by 4)
+        The control chars is called Preamble Address Code [PAC].
+    4. If positioning needs to be on columns not divisible by 4, use a [TO] command
