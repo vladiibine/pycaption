@@ -18,9 +18,13 @@ Commands:
 Pop-On:
     1. 94ae [ENM] (erase non displayed memory)
     2. 9420 [RCL] (resume caption loading => this command here means we're using Pop-On captions)
+    2.1? [ENM] - if step 0 was skipped?
     3. [PAC] Positioning/ styling command (can position on columns divisible by 4)
         The control chars is called Preamble Address Code [PAC].
     4. If positioning needs to be on columns not divisible by 4, use a [TO] command
+    5. text
+    6. 942c [EDM] - optionally, erase the currently displayed caption
+    7. 942f [EOC] display the caption
 
 
 Roll-Up:

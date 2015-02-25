@@ -1,24 +1,41 @@
 read
-    _translate_line(line) 
-        _translate_word(word) 
-            _translate_command(word) 
-                _handle_double_command(word) 
-                _convert_to_caption(buffer, start) 
-                    _translate_break(caption) 
-                    _remove_italics(caption) 
-                _translate_time(stamp) 
-                _roll_up(self) 
-                    _convert_to_caption(buffer, start) 
-                        _translate_break(caption) 
-                        _remove_italics(caption) 
-                    _translate_time(stamp) 
-            _translate_special_char(word) 
-                _handle_double_command(word) 
-            _translate_extended_char(word) 
-                _handle_double_command(word) 
-            _translate_characters(word) 
+    _translate_line(line)
+        _translate_word(word)
+            _translate_command(word)
+                _handle_double_command(word)
+                _convert_to_caption(buffer, start)
+                    _translate_break(caption)
+                    _remove_italics(caption)
+                _translate_time(stamp)
+                _roll_up(self)
+                    _convert_to_caption(buffer, start)
+                        _translate_break(caption)
+                        _remove_italics(caption)
+                    _translate_time(stamp)
+            _translate_special_char(word)
+                _handle_double_command(word)
+            _translate_extended_char(word)
+                _handle_double_command(word)
+            _translate_characters(word)
     _roll_up(self)
-        _convert_to_caption(buffer, start) 
-            _translate_break(caption) 
-            _remove_italics(caption) 
-        _translate_time(stamp) 
+        _convert_to_caption(buffer, start)
+            _translate_break(caption)
+            _remove_italics(caption)
+        _translate_time(stamp)
+
+simplifications:
+   Where are the CaptionNode objects created?
+   :
+    _convert_to_caption(buffer, start) # everything is created
+        _translate_break(caption) # .STYLE and .BREAK nodes created
+        _remove_italics(caption)  # nodes are deleted
+
+    and then the code path to _convert_to_caption
+
+    read
+        _translate_line
+            _translate_word
+                _translate_command
+                    _convert_to_caption
+                    _roll_up
+        _roll_up
