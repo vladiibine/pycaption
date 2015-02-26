@@ -13,6 +13,9 @@ Commands:
     97a1, 97a2, 9723 - [TO] move 1, 2 or 3 columns - Tab Over command
     942f - [EOC] - display the buffer on the screen - End Of Caption
     ... - [PAC] - Preamble address code (can set positioning and style)
+    9429 - [RDC] - Resume Direct Captioning
+    142d? - [CR] carriage return?
+    1424? - [DER] Delete to End of Row
 
 
 Pop-On:
@@ -39,3 +42,22 @@ Paint-On:
     3. text
     4. [PAC]
     5. text or [DER]
+
+We already use these codes that are don't have an even parity
+94fc
+92fc
+97fc
+16fc
+15fc
+13fc
+15462
+16462
+91fc
+13462
+91b4
+
+The rest of them do...
+
+DISCLAIMER:
+Haven't analyzed the PAC (for writing)... so let's
+- all have even parity
