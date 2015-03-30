@@ -239,11 +239,9 @@ class SCCReader(BaseReader):
                     self.paint_buffer, self.paint_time)
                 self.paint_buffer = _InterpretableNodeStash()
 
-            # attempt to add proper end time to last caption
-            last_caption = self.caption_stash.get_last()
-            if last_caption and last_caption.end == 0:
-                last_time = self.time_translator.get_time()
-                last_caption.end = last_time
+            # attempt to add proper end time to last caption(s)
+            self.caption_stash.correct_last_timing(
+                self.time_translator.get_time())
 
         # if command not one of the aforementioned, add to buffer
         else:
@@ -292,7 +290,7 @@ class SCCReader(BaseReader):
         self.roll_time = self.time_translator.get_time()
 
         # try to insert the proper ending time for the previous caption
-        self.caption_stash.correct_last_timing(self.roll_time)
+        self.caption_stash.correct_last_timing(self.roll_time, force=True)
 
 
 class SCCWriter(BaseWriter):
@@ -443,13 +441,24 @@ class _CaptionStash(object):
     def __init__(self):
         self._collection = _TimingCorrectingCaptionList()
 
-    def correct_last_timing(self, time):
-        """Called to set the time on the last Caption stored.
+    def correct_last_timing(self, time, force=False):
+        """Called to set the time on the last Caption(s) stored with no end
+        time
+
+        :type force: bool
+        :param force: Set the end time even if there's already an end time
 
         :type time: int
         """
-        if self._collection:
+        if not self._collection:
+            return
+
+        if force:
             self._collection[-1].end = time
+        else:
+            caption = self._collection[-1]
+            if caption.end == 0:
+                caption.end = time
 
     def get_last(self):
         """Returns the last caption stored (for setting the time on it),
@@ -484,6 +493,13 @@ class _CaptionStash(object):
             # skip empty elements
             if element.is_empty():
                 continue
+
+            elif element.requires_repositioning():
+                self._remove_extra_italics(caption)
+                self._collection.append(caption)
+                caption = Caption()
+                caption.start = start
+                caption.end = 0
 
             # handle line breaks
             elif element.is_explicit_break():
@@ -695,7 +711,8 @@ class _InterpretableNodeStash(object):
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
             # must insert a line break here
-            self._collection.append(_InterpretableNode.create_break())
+            self._collection.append(_InterpretableNode.create_break(
+                position=current_position))
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
@@ -703,6 +720,8 @@ class _InterpretableNodeStash(object):
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
             # this node will have a different positioning than the previous one
+            self._collection.append(
+                _InterpretableNode.create_repositioning_command())
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
@@ -869,6 +888,7 @@ class _InterpretableNode(object):
     BREAK = 1
     ITALICS_ON = 2
     ITALICS_OFF = 3
+    CHANGE_POSITION = 4
 
     def __init__(self, text=None, position=None, type_=0):
         """
@@ -925,18 +945,28 @@ class _InterpretableNode(object):
         """
         return self._type == self.ITALICS_OFF
 
+    def requires_repositioning(self):
+        """Whether the node must be interpreted as a change in positioning
+
+        :rtype: bool
+        """
+        return self._type == self.CHANGE_POSITION
+
     def get_text(self):
         """A little legacy code.
         """
         return u' '.join(self.text.split())
 
     @classmethod
-    def create_break(cls):
+    def create_break(cls, position):
         """Create a node, interpretable as an explicit line break
+
+        :type position: tuple[int]
+        :param position: a tuple (row, col) containing the positioning info
 
         :rtype: _InterpretableNode
         """
-        return cls(type_=cls.BREAK)
+        return cls(type_=cls.BREAK, position=position)
 
     @classmethod
     def create_text(cls, position, *chars):
@@ -969,14 +999,23 @@ class _InterpretableNode(object):
             type_=cls.ITALICS_ON if turn_on else cls.ITALICS_OFF
         )
 
+    @classmethod
+    def create_repositioning_command(cls):
+        """Create node interpretable as a command to change the current
+        position
+        """
+        return cls(type_=cls.CHANGE_POSITION)
+
     def __repr__(self):
         if self._type == self.BREAK:
             return u'<INode: BR>'
         elif self._type == self.TEXT:
             return u'<INode: "{}">'.format(self.text)
-        else:
+        elif self._type in (self.ITALICS_ON, self.ITALICS_OFF):
             return u'<INode: italics {}>'.format(
                 u'on' if self._type == self.ITALICS_ON else u'off')
+        else:
+            return u'<INode: change position>'
 
 
 def _get_italics_state_from_command(command):
