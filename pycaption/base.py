@@ -47,6 +47,9 @@ class BaseReader(object):
 
 
 class BaseWriter(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
     def write(self, content):
         return content
 
@@ -141,8 +144,13 @@ class Caption(object):
         return self._format_timestamp(self.end, msec_separator)
 
     def __repr__(self):
-        return repr(u'%s --> %s\n%s' % (
-                self.format_start(), self.format_end(), self.get_text()))
+        return repr(
+            u'{start} --> {end}\n{text}'.format(
+                start=self.format_start(),
+                end=self.format_end(),
+                text=self.get_text()
+            )
+        )
 
     def get_text(self):
         """

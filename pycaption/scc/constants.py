@@ -1,16 +1,6 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import re
-import math
-import string
-import textwrap
-
-from .base import (
-    BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
-) 
-from .exceptions import CaptionReadNoCaptions
-
+from itertools import product
 
 COMMANDS = {
     u'9420': u'',
@@ -747,482 +737,247 @@ EXTENDED_CHARS = {
 
 
 # Cursor positioning codes
-PAC_HIGH_BYTE_BY_ROW = [u'xx',u'91',u'91',u'92',u'92',u'15',u'15',u'16',u'16',u'97',u'97',u'10',u'13',u'13',u'94',u'94']
-PAC_LOW_BYTE_BY_ROW = [u'xx',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'd0',u'70',u'd0',u'70']
+PAC_HIGH_BYTE_BY_ROW = [
+    u'xx',
+    u'91',
+    u'91',
+    u'92',
+    u'92',
+    u'15',
+    u'15',
+    u'16',
+    u'16',
+    u'97',
+    u'97',
+    u'10',
+    u'13',
+    u'13',
+    u'94',
+    u'94'
+]
+PAC_LOW_BYTE_BY_ROW_RESTRICTED = [
+    u'xx',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70'
+]
+
+# High order bytes come first, then each key contains a list of low bytes.
+# Any of the values in that list, coupled with the high order byte will
+# map to the (row, column) tuple.
+# This particular dictionary will get transformed to a more suitable form for
+# usage like PAC_BYTES_TO_POSITIONING_MAP[u'91'][u'd6'] = (1, 12)
+PAC_BYTES_TO_POSITIONING_MAP = {
+    u'91': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (1, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (2, 0),  # noqa
+        (u'52', u'd3'): (1, 4),
+        (u'54', u'd5'): (1, 8),
+        (u'd6', u'57'): (1, 12),
+        (u'58', u'd9'): (1, 16),
+        (u'da', u'5b'): (1, 20),
+        (u'dc', u'5d'): (1, 24),
+        (u'5e', u'df'): (1, 28),
+
+        (u'f2', u'73'): (2, 4),
+        (u'f4', u'75'): (2, 8),
+        (u'76', u'f7'): (2, 12),
+        (u'f8', u'79'): (2, 16),
+        (u'7a', u'fb'): (2, 20),
+        (u'7c', u'fd'): (2, 24),
+        (u'fe', u'7f'): (2, 28)
+    },
+    u'92': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (3, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (4, 0),  # noqa
+        (u'52', u'd3'): (3, 4),
+        (u'54', u'd5'): (3, 8),
+        (u'd6', u'57'): (3, 12),
+        (u'58', u'd9'): (3, 16),
+        (u'da', u'5b'): (3, 20),
+        (u'dc', u'5d'): (3, 24),
+        (u'5e', u'df'): (3, 28),
+
+        (u'f2', u'73'): (4, 4),
+        (u'f4', u'75'): (4, 8),
+        (u'76', u'f7'): (4, 12),
+        (u'f8', u'79'): (4, 16),
+        (u'7a', u'fb'): (4, 20),
+        (u'7c', u'fd'): (4, 24),
+        (u'fe', u'7f'): (4, 28)
+    },
+    u'15': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (5, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (6, 0),  # noqa
+        (u'52', u'd3'): (5, 4),
+        (u'54', u'd5'): (5, 8),
+        (u'd6', u'57'): (5, 12),
+        (u'58', u'd9'): (5, 16),
+        (u'da', u'5b'): (5, 20),
+        (u'dc', u'5d'): (5, 24),
+        (u'5e', u'df'): (5, 28),
+
+        (u'f2', u'73'): (6, 4),
+        (u'f4', u'75'): (6, 8),
+        (u'76', u'f7'): (6, 12),
+        (u'f8', u'79'): (6, 16),
+        (u'7a', u'fb'): (6, 20),
+        (u'7c', u'fd'): (6, 24),
+        (u'fe', u'7f'): (6, 28)
+    },
+    u'16': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (7, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (8, 0),  # noqa
+        (u'52', u'd3'): (7, 4),
+        (u'54', u'd5'): (7, 8),
+        (u'd6', u'57'): (7, 12),
+        (u'58', u'd9'): (7, 16),
+        (u'da', u'5b'): (7, 20),
+        (u'dc', u'5d'): (7, 24),
+        (u'5e', u'df'): (7, 28),
+
+        (u'f2', u'73'): (8, 4),
+        (u'f4', u'75'): (8, 8),
+        (u'76', u'f7'): (8, 12),
+        (u'f8', u'79'): (8, 16),
+        (u'7a', u'fb'): (8, 20),
+        (u'7c', u'fd'): (8, 24),
+        (u'fe', u'7f'): (8, 28)
+    },
+    u'97': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (9, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (10, 0),  # noqa
+        (u'52', u'd3'): (9, 4),
+        (u'54', u'd5'): (9, 8),
+        (u'd6', u'57'): (9, 12),
+        (u'58', u'd9'): (9, 16),
+        (u'da', u'5b'): (9, 20),
+        (u'dc', u'5d'): (9, 24),
+        (u'5e', u'df'): (9, 28),
+
+        (u'f2', u'73'): (10, 4),
+        (u'f4', u'75'): (10, 8),
+        (u'76', u'f7'): (10, 12),
+        (u'f8', u'79'): (10, 16),
+        (u'7a', u'fb'): (10, 20),
+        (u'7c', u'fd'): (10, 24),
+        (u'fe', u'7f'): (10, 28)
+    },
+    u'10': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (11, 0),  # noqa
+        (u'52', u'd3'): (11, 4),
+        (u'54', u'd5'): (11, 8),
+        (u'd6', u'57'): (11, 12),
+        (u'58', u'd9'): (11, 16),
+        (u'da', u'5b'): (11, 20),
+        (u'dc', u'5d'): (11, 24),
+        (u'5e', u'df'): (11, 28),
+    },
+    u'13': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (12, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (13, 0),  # noqa
+        (u'52', u'd3'): (12, 4),
+        (u'54', u'd5'): (12, 8),
+        (u'd6', u'57'): (12, 12),
+        (u'58', u'd9'): (12, 16),
+        (u'da', u'5b'): (12, 20),
+        (u'dc', u'5d'): (12, 24),
+        (u'5e', u'df'): (12, 28),
+
+        (u'f2', u'73'): (13, 4),
+        (u'f4', u'75'): (13, 8),
+        (u'76', u'f7'): (13, 12),
+        (u'f8', u'79'): (13, 16),
+        (u'7a', u'fb'): (13, 20),
+        (u'7c', u'fd'): (13, 24),
+        (u'fe', u'7f'): (13, 28)
+    },
+    u'94': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (14, 0),  # noqa
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (15, 0),  # noqa
+        (u'52', u'd3'): (14, 4),
+        (u'54', u'd5'): (14, 8),
+        (u'd6', u'57'): (14, 12),
+        (u'58', u'd9'): (14, 16),
+        (u'da', u'5b'): (14, 20),
+        (u'dc', u'5d'): (14, 24),
+        (u'5e', u'df'): (14, 28),
+
+        (u'f2', u'73'): (15, 4),
+        (u'f4', u'75'): (15, 8),
+        (u'76', u'f7'): (15, 12),
+        (u'f8', u'79'): (15, 16),
+        (u'7a', u'fb'): (15, 20),
+        (u'7c', u'fd'): (15, 24),
+        (u'fe', u'7f'): (15, 28)
+    }
+}
+
+
+def _create_position_to_bytes_map(bytes_to_pos):
+    result = {}
+    for high_byte, low_byte_dict in bytes_to_pos.items():
+
+        # must contain mappings to column, to the tuple of possible values
+        for low_byte_list in low_byte_dict.keys():
+            column = bytes_to_pos[high_byte][low_byte_list][1]
+
+            row = bytes_to_pos[high_byte][low_byte_list][0]
+            if row not in result:
+                result[row] = {}
+
+            result[row][column] = (
+                tuple(product([high_byte], low_byte_list)))
+    return result
+
+# (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
+# like for example [15][4] to get the tuple ((u'94', u'f2'), (u'94', u'73'))
+POSITIONING_TO_PAC_MAP = _create_position_to_bytes_map(
+    PAC_BYTES_TO_POSITIONING_MAP
+)
+
+
+def _restructure_bytes_to_position_map(byte_to_pos_map):
+    return {
+        k_: {
+            low_byte: byte_to_pos_map[k_][low_byte_list]
+            for low_byte_list in v_.keys() for low_byte in low_byte_list
+        }
+        for k_, v_ in byte_to_pos_map.items()
+    }
+
+# Now use the dict with arguments like [u'91'][u'75'] directly.
+PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
+    PAC_BYTES_TO_POSITIONING_MAP)
 
 
 # Inverted character lookup
-CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {character: code for code, character in EXTENDED_CHARS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
+CHARACTER_TO_CODE = {
+    character: code
+    for code, character in CHARACTERS.iteritems()
+}
 
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
+    character: code for code, character in EXTENDED_CHARS.iteritems()
+}
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
+    {character: code for code, character in SPECIAL_CHARS.iteritems()}
+)
 
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 
 
 HEADER = u'Scenarist_SCC V1.0'
-
-
-class SCCReader(BaseReader):
-    def __init__(self, *args, **kw):
-        self.scc = []
-        self.time = u''
-        self.pop_buffer = u''
-        self.paint_buffer = u''
-        self.last_command = u''
-        self.roll_rows = []
-        self.roll_rows_expected = 0
-        self.pop_on = False
-        self.paint_on = False
-        self.frame_count = 0
-        self.simulate_roll_up = False
-        self.offset = 0
-
-    def detect(self, content):
-        lines = content.splitlines()
-        if lines[0] == HEADER:
-            return True
-        else:
-            return False
-
-    def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
-        if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
-
-        self.simulate_roll_up = simulate_roll_up
-        self.offset = offset * 1000000
-        # split lines
-        lines = content.splitlines()
-
-        # loop through each line except the first
-        for line in lines[1:]:
-            self._translate_line(line)
-
-        # after converting lines, see if anything is left in paint_buffer
-        if self.paint_buffer:
-            self._roll_up()
-
-        captions = CaptionSet()
-        captions.set_captions(lang, self.scc)
-
-        if captions.is_empty():
-            raise CaptionReadNoCaptions(u"empty caption file")
-
-        return captions
-
-    def _translate_line(self, line):
-        # ignore blank lines
-        if line.strip() == u'':
-            return
-
-        # split line in timestamp and words
-        r = re.compile(u"([0-9:;]*)([\s\t]*)((.)*)")
-        parts = r.findall(line.lower())
-
-        self.time = parts[0][0]
-        self.frame_count = 0
-
-        # loop through each word
-        for word in parts[0][2].split(u' '):
-            # ignore empty results
-            if word.strip() != u'':
-                self._translate_word(word)
-
-    def _translate_word(self, word):
-        # count frames for timing
-        self.frame_count += 1
-
-        # first check if word is a command
-        if word in COMMANDS:
-            self._translate_command(word)
-
-        # second, check if word is a special character
-        elif word in SPECIAL_CHARS:
-            self._translate_special_char(word)
-
-        elif word in EXTENDED_CHARS:
-            self._translate_extended_char(word)
-
-        # third, try to convert word into 2 characters
-        else:
-            self._translate_characters(word)
-
-    def _handle_double_command(self, word):
-        # ensure we don't accidentally use the same command twice
-        if word == self.last_command:
-            self.last_command = u''
-            return True
-        else:
-            self.last_command = word
-            return False
-
-    def _translate_special_char(self, word):
-        if self._handle_double_command(word):
-            return
-
-        # add to buffer
-        if self.paint_on:
-            self.paint_buffer += SPECIAL_CHARS[word]
-        else:
-            self.pop_buffer += SPECIAL_CHARS[word]
-
-    def _translate_extended_char(self, word):
-        if self._handle_double_command(word):
-            return
-
-        # add to buffer
-        if self.paint_on:
-            if self.paint_buffer:
-                self.paint_buffer = self.paint_buffer[:-1]
-            self.paint_buffer += EXTENDED_CHARS[word]
-        else:
-            if self.pop_buffer:
-                self.pop_buffer = self.pop_buffer[:-1]
-            self.pop_buffer += EXTENDED_CHARS[word]
-
-    def _translate_command(self, word):
-        if self._handle_double_command(word):
-            return
-
-        # if command is pop_up
-        if word == u'9420':
-            self.pop_on = True
-            self.paint_on = False
-
-        # if command is paint_on / _roll_up
-        elif word in [u'9429', u'9425', u'9426', u'94a7']:
-            self.paint_on = True
-            self.pop_on = False
-
-            # count how many lines are expected
-            if word == u'9429':
-                self.roll_rows_expected = 1
-            elif word == u'9425':
-                self.roll_rows_expected = 2
-            elif word == u'9426':
-                self.roll_rows_expected = 3
-            elif word == u'94a7':
-                self.roll_rows_expected = 4
-
-            # if content is in the queue, turn it into a caption
-            if self.paint_buffer:
-                # convert and empty buffer
-                self._convert_to_caption(self.paint_buffer, self.paint_time)
-                self.paint_buffer = u''
-
-            # set rows to empty, configure start time for caption
-            self.roll_rows = []
-            self.paint_time = self._translate_time(self.time[:-2] +
-                                                   unicode(int(self.time[-2:]) +
-                                                   self.frame_count))
-
-        # clear pop_on buffer
-        elif word == u'94ae':
-            self.pop_buffer = u''
-
-        # display pop_on buffer
-        elif word == u'942f' and self.pop_buffer:
-            # configure timestamp, convert and empty buffer
-            self.pop_time = self._translate_time(self.time[:-2] +
-                                                 unicode(int(self.time[-2:]) +
-                                                 self.frame_count))
-            self._convert_to_caption(self.pop_buffer, self.pop_time)
-            self.pop_buffer = u''
-
-        # roll up captions
-        elif word == u'94ad':
-            # display paint_on buffer
-            if self.paint_buffer:
-                self._roll_up()
-
-        # clear screen
-        elif word == u'942c':
-            self.roll_rows = []
-
-            if self.paint_buffer:
-                self._roll_up()
-
-            # attempt to add proper end time to last caption
-            if self.scc and self.scc[-1].end == 0:
-                last_time = self._translate_time(self.time[:-2] +
-                                                 unicode(int(self.time[-2:]) +
-                                                 self.frame_count))
-                self.scc[-1].end = last_time
-
-        # if command not one of the aforementioned, add to buffer
-        else:
-            if self.paint_on:
-                self.paint_buffer += COMMANDS[word]
-            else:
-                self.pop_buffer += COMMANDS[word]
-
-    def _translate_characters(self, word):
-        # split word into the 2 bytes
-        byte1 = word[:2]
-        byte2 = word[2:]
-
-        # check to see if the the bytes are recognized characters
-        if byte1 not in CHARACTERS or byte2 not in CHARACTERS:
-            return
-
-        # if so, add to buffer
-        if self.paint_on:
-            self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
-        else:
-            self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
-
-    # convert SCC timestamp into total microseconds
-    def _translate_time(self, stamp):
-        if u';' in stamp:
-            # Drop-frame timebase runs at the same rate as wall clock
-            seconds_per_timestamp_second = 1.0
-        else:
-            # Non-drop-frame timebase runs "slow"
-            # 1 second of timecode is longer than an actual second (1.001s)
-            seconds_per_timestamp_second = 1001.0 / 1000.0
-
-        timesplit = stamp.replace(u';', u':').split(u':')
-
-        timestamp_seconds = (int(timesplit[0]) * 3600 +
-                             int(timesplit[1]) * 60 +
-                             int(timesplit[2]) +
-                             int(timesplit[3]) / 30.0)
-
-        seconds = timestamp_seconds * seconds_per_timestamp_second
-        microseconds = seconds * 1000 * 1000 - self.offset
-
-        if microseconds < 0:
-            microseconds = 0
-
-        return microseconds
-
-    # convert buffer into Caption object
-    def _convert_to_caption(self, buffer, start):
-        # check to see if previous caption needs an end-time
-        if self.scc and self.scc[-1].end == 0:
-            self.scc[-1].end = start
-
-        # initial variables
-        caption = Caption()
-        caption.start = start
-        caption.end = 0 # Not yet known; filled in later
-        self.open_italic = False
-        self.first_element = True
-
-        # split into elements (e.g. break, italics, text)
-        for element in buffer.split(u'<$>'):
-            # skip empty elements
-            if element.strip() == u'':
-                continue
-
-            # handle line breaks
-            elif element == u'{break}':
-                self._translate_break(caption)
-
-            # handle open italics
-            elif element == u'{italic}':
-                # add italics
-                caption.nodes.append(CaptionNode.create_style(True, {u'italics': True}))
-                # open italics, no longer first element
-                self.open_italic = True
-                self.first_element = False
-
-            # handle clone italics
-            elif element == u'{end-italic}' and self.open_italic:
-                caption.nodes.append(CaptionNode.create_style(False, {u'italics': True}))
-                self.open_italic = False
-
-            # handle text
-            else:
-                # add text
-                caption.nodes.append(CaptionNode.create_text(u' '.join(element.split())))
-                # no longer first element
-                self.first_element = False
-
-        # close any open italics left over
-        if self.open_italic == True:
-            caption.nodes.append(CaptionNode.create_style(False, {u'italics': True}))
-
-        # remove extraneous italics tags in the same caption
-        self._remove_italics(caption)
-
-        # only add captions to list if content inside exists
-        if caption.nodes:
-            self.scc.append(caption)
-
-    def _translate_break(self, caption):
-        # if break appears at start of caption, skip break
-        if self.first_element == True:
-            return
-        # if the last caption was a break, skip this break
-        elif caption.nodes[-1].type_ == CaptionNode.BREAK:
-            return
-        # close any open italics
-        elif self.open_italic == True:
-            caption.nodes.append(CaptionNode.create_style(False, {u'italics': True}))
-            self.open_italic = False
-
-        # add line break
-        caption.nodes.append(CaptionNode.create_break())
-
-    def _remove_italics(self, caption):
-        i = 0
-        length = max(0, len(caption.nodes) - 2)
-        while i < length:
-            if (caption.nodes[i].type_ == CaptionNode.STYLE and caption.nodes[i].content[u'italics'] and
-                        caption.nodes[i + 1].type_ == CaptionNode.BREAK and
-                        caption.nodes[i + 2].type_ == CaptionNode.STYLE and caption.nodes[i + 2].content[u'italics']):
-                # Remove the two italics style nodes
-                caption.nodes.pop(i)
-                caption.nodes.pop(i + 1)
-                length -= 2
-            i += 1
-
-    def _roll_up(self):
-        if self.simulate_roll_up == False:
-            self.roll_rows = []
-
-        # if rows already filled, drop the top one
-        if len(self.roll_rows) >= self.roll_rows_expected:
-            self.roll_rows.pop(0)
-
-        # add buffer as row to bottom
-        self.roll_rows.append(self.paint_buffer)
-        self.paint_buffer = u' '.join(self.roll_rows)
-
-        # convert buffer and empty
-        self._convert_to_caption(self.paint_buffer, self.paint_time)
-        self.paint_buffer = u''
-
-        # configure time
-        self.paint_time = self._translate_time(
-            self.time[:-2] +
-            unicode(int(self.time[-2:]) +
-            self.frame_count))
-
-        # try to insert the proper ending time for the previous caption
-        try:
-            self.scc[-1].end = self.paint_time
-        except IndexError:
-            pass
-
-
-class SCCWriter(BaseWriter):
-
-    def __init__(self, *args, **kw):
-        pass
-
-    def write(self, caption_set):
-        output = HEADER + u'\n\n'
-
-        if caption_set.is_empty():
-            return output
-
-        # Only support one language.
-        lang = caption_set.get_languages()[0]
-        captions = caption_set.get_captions(lang)
-
-        # PASS 1: compute codes for each caption
-        codes = [(self._text_to_code(caption), caption.start, caption.end)
-                 for caption in captions]
-
-        # PASS 2:
-        # Advance start times so as to have time to write to the pop-on
-        # buffer; possibly remove the previous clear-screen command
-        for index, (code, start, end) in enumerate(codes):
-            code_words = len(code) / 5 + 8
-            code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
-            code_start = start - code_time_microseconds
-            if index == 0:
-                continue
-            previous_code, previous_start, previous_end = codes[index-1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                codes[index-1] = (previous_code, previous_start, None)
-            codes[index] = (code, code_start, end)
-
-        # PASS 3:
-        # Write captions.
-        for (code, start, end) in codes:
-            output += (u'%s\t' % self._format_timestamp(start))
-            output += u'94ae 94ae 9420 9420 '
-            output += code
-            output += u'942c 942c 942f 942f\n\n'
-            if end != None:
-                output += u'%s\t942c 942c\n\n' % self._format_timestamp(end)
-
-        return output
-
-    # Wrap lines at 32 chars
-    def _layout_line(self, caption):
-        def caption_node_to_text(caption_node):
-            if caption_node.type_ == CaptionNode.TEXT:
-                return unicode(caption_node.content)
-            elif caption_node.type_ == CaptionNode.BREAK:
-                return u'\n'
-        caption_text = u''.join([caption_node_to_text(node)
-                                for node in caption.nodes])
-        inner_lines = string.split(caption_text, u'\n')
-        inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
-        return u'\n'.join(inner_lines_laid_out)
-
-    def _maybe_align(self, code):
-        # Finish a half-word with a no-op so we can move to a full word
-        if len(code) % 5 == 2:
-            code += u'80 '
-        return code
-
-    def _maybe_space(self, code):
-        if len(code) % 5 == 4:
-            code += u' '
-        return code
-
-    def _print_character(self, code, char):
-        try:
-            char_code = CHARACTER_TO_CODE[char]
-        except KeyError:
-            try:
-                char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE[char]
-            except KeyError:
-                char_code = u'91b6' # Use £ as "unknown character" symbol
-
-        if len(char_code) == 2:
-            return code + char_code
-        elif len(char_code) == 4:
-            return self._maybe_align(code) + char_code
-        else:
-            # This should not happen!
-            return code
-
-    def _text_to_code(self, s):
-        code = u''
-        lines = string.split(self._layout_line(s), u'\n')
-        for row, line in enumerate(lines):
-            row = 16 - len(lines) + row
-            # Move cursor to column 0 of the destination row
-            for _ in range(2):
-                code += (u'%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
-                                    PAC_LOW_BYTE_BY_ROW[row]))
-            # Print the line using the SCC encoding
-            for index, char in enumerate(line):
-                code = self._print_character(code, char)
-                code = self._maybe_space(code)
-            code = self._maybe_align(code)
-        return code
-
-    def _format_timestamp(self, microseconds):
-        seconds_float = microseconds / 1000.0 / 1000.0
-        # Convert to non-drop-frame timecode
-        seconds_float *= 1000.0 / 1001.0
-        hours = math.floor(seconds_float / 3600)
-        seconds_float -= hours * 3600
-        minutes = math.floor(seconds_float / 60)
-        seconds_float -= minutes * 60
-        seconds = math.floor(seconds_float)
-        seconds_float -= seconds
-        frames = math.floor(seconds_float * 30)
-        return u'%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
-
-
-
-
