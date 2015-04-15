@@ -40,6 +40,16 @@ class SCCtoDFXPTestCase(unittest.TestCase):
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
 
 
+class DummyTest(unittest.TestCase):
+    def test_will_rename_this_later(self):
+        # import pydevd; pydevd.settrace('172.16.65.1')
+        caption_set = SCCReader().read(SAMPLE_SCC_PRODUCED_INVALID_DFXP)
+
+        dfxp = DFXPWriter().write(caption_set)
+
+        x = 1
+
+
 SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -109,3 +119,23 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
   </div>
  </body>
 </tt>"""
+
+SAMPLE_SCC_PRODUCED_INVALID_DFXP = u"""\
+Scenarist_SCC V1.0
+
+00:01:28;09 9420 942f 94ae 9420 9452 97a2 e3e3 e3e3 e3e3 9470 9723 e3a1 e3a1
+
+00:01:31;10 9420 942f 94ae
+
+00:01:31;18 9420 9454 6262 6262 9458 97a1 91ae e3e3 e3e3 9470 97a1 6262 6161
+
+00:01:35;18 9420 942f 94ae
+
+00:01:40;25 942c
+
+00:01:51;18 9420 9452 97a1 6161 94da 97a2 91ae 6262 9470 97a1 e3e3
+
+00:01:55;22 9420 942f 6162 e364 94f4 9723 6162 e364
+
+00:01:59;14 9420 942f 94ae 9420 94f4 6464 6464
+"""

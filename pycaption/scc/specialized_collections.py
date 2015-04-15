@@ -1,5 +1,4 @@
 from ..base import Caption, CaptionNode
-from ..exceptions import CaptionReadSyntaxError
 from ..geometry import UnitEnum, Size, Layout, Point
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
@@ -246,12 +245,26 @@ class InterpretableNodeCreator(object):
     """Creates _InterpretableNode instances from characters and commands,
     and stores them internally in a buffer.
     """
-    def __init__(self, collection=None):
+    def __init__(self, collection=None, italics_tracker=None,
+                 position_tracker=None):
+        """
+        :param collection: an optional collection of nodes
+
+        :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
+        :param italics_tracker: object that cna be interrogated to get the
+            italics state of the nodes we're creating (whether italics
+            should be on or off)
+
+        :param position_tracker:
+        :return:
+        """
         if not collection:
             self._collection = []
         else:
             self._collection = collection
-        self._position_tracer = DefaultProvidingPositionTracer()
+
+        self._position_tracer = position_tracker
+        self.italics_tracker = italics_tracker
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -345,16 +358,26 @@ class InterpretableNodeCreator(object):
         return iter(self._collection)
 
     @classmethod
-    def from_list(cls, stash_list):
+    def from_list(cls, stash_list, italics_tracker, position_tracker):
         """Having received a list of instances of this class, creates a new
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
 
-        :param stash_list: a list of instances of this class
         :type stash_list: list[InterpretableNodeCreator]
+        :param stash_list: a list of instances of this class
+
+        :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
+        :param italics_tracker: state machine to be interrogated about
+            the italics state when creating a node
+
+        :type position_tracker: .state_machines.DefaultProvidingPositionTracker
+        :param position_tracker: state machine to be interrogated about the
+            positioning when creating a node
+
         :rtype: InterpretableNodeCreator
         """
-        instance = cls()
+        instance = cls(italics_tracker=italics_tracker,
+                       position_tracker=position_tracker)
         new_collection = instance._collection
 
         for idx, stash in enumerate(stash_list):
@@ -388,148 +411,6 @@ def _get_layout_from_tuple(position_tuple):
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
     vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
     return Layout(origin=Point(horizontal, vertical))
-
-
-class _PositioningTracer(object):
-    """Helps determine the positioning of a node, having kept track of
-    positioning-related commands.
-
-    Acts like a state-machine, with 2
-
-    """
-    def __init__(self, positioning=None):
-        """
-        :param positioning: positioning information (row, column)
-        :type positioning: tuple[int]
-        """
-        self._positions = [positioning]
-        self._break_required = False
-        self._repositioning_required = False
-
-    def update_positioning(self, positioning):
-        """Being notified of a position change, updates the internal state,
-        to as to be able to tell if it was a trivial change (a simple line
-        break) or not.
-
-        :type positioning: tuple[int]
-        :param positioning: a tuple (row, col)
-        """
-        current = self._positions[-1]
-
-        if not current:
-            if positioning:
-                # set the positioning for the first time
-                self._positions = [positioning]
-            return
-
-        row, col = current
-        new_row, _ = positioning
-
-        # is the new position simply one line below?
-        if new_row == row + 1:
-            self._positions.append((new_row, col))
-            self._break_required = True
-        else:
-            # reset the "current" position altogether.
-            self._positions = [positioning]
-            self._repositioning_required = True
-
-    def get_current_position(self):
-        """Returns the current usable position
-
-        :rtype: tuple[int]
-
-        :raise: CaptionReadSyntaxError
-        """
-        if not any(self._positions):
-            raise CaptionReadSyntaxError(
-                u'No Preamble Address Code [PAC] was provided'
-            )
-        else:
-            return self._positions[0]
-
-    def is_repositioning_required(self):
-        """Determines whether the current positioning has changed non-trivially
-
-        Trivial would be mean that a line break should suffice.
-        :rtype: bool
-        """
-        return self._repositioning_required
-
-    def acknowledge_position_changed(self):
-        """Acknowledge the position tracer that the position was changed
-        """
-        self._repositioning_required = False
-
-    def is_linebreak_required(self):
-        """If the current position is simply one line below the previous.
-        :rtype: bool
-        """
-        return self._break_required
-
-    def acknowledge_linebreak_consumed(self):
-        """Call to acknowledge that the line required was consumed
-        """
-        self._break_required = False
-
-
-class DefaultProvidingPositionTracer(_PositioningTracer):
-    """A _PositioningTracer that provides if needed a default value (14, 0), or
-    uses the last positioning value set anywhere in the document
-    """
-    # Set this on the class level, because instances should share this
-    # beyond their garbage collection
-    default = (14, 0)
-
-    def __init__(self, positioning=None, default=None):
-        """
-        :type positioning: tuple[int]
-        :param positioning: a tuple of ints (row, column)
-
-        :type default: tuple[int]
-        :param default: a tuple of ints (row, column) to use as fallback
-        """
-        super(DefaultProvidingPositionTracer, self).__init__(positioning)
-
-        if default and default != DefaultProvidingPositionTracer.default:
-            DefaultProvidingPositionTracer.default = default
-
-    def get_current_position(self):
-        """Returns the currently tracked positioning, the last positioning that
-        was set (anywhere), or the default it was initiated with
-
-        :rtype: tuple[int]
-        """
-        try:
-            return (
-                super(DefaultProvidingPositionTracer, self).
-                get_current_position()
-            )
-        except CaptionReadSyntaxError:
-            return DefaultProvidingPositionTracer.default
-
-    def update_positioning(self, positioning):
-        """If called, sets this positioning as the default, then delegates
-        to the super class.
-
-        :param positioning: a tuple of ints (row, col)
-        :type positioning: tuple[int]
-        """
-        if positioning:
-            DefaultProvidingPositionTracer.default = positioning
-
-        super(DefaultProvidingPositionTracer, self).update_positioning(
-            positioning)
-
-    @classmethod
-    def reset_default_positioning(cls):
-        """Resets the previous default value to the original (14, 0)
-
-        When the context changes (a new caption is being processed, the
-        default positioning must NOT be carried over). Needed because we store
-        information at the class level.
-        """
-        cls.default = (14, 0)
 
 
 class _InterpretableNode(object):
