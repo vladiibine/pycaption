@@ -125,6 +125,12 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(expected_caption_layouts, actual_caption_layouts)
 
 
+class DummyTests(unittest.TestCase):
+    def test_style_tags_are_properly_closed(self):
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_NOT_EXPLICITLY_SWITCHING_ITALICS_OFF)
+
+
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
      This class includes tests that ensure that at the very least, we don't
@@ -327,4 +333,58 @@ Scenarist_SCC V1.0
 00:53:28;01	9420 94ae 4552 aeae 942c
 
 00:54:29;21	942f
+"""
+
+SAMPLE_SCC_NOT_EXPLICITLY_SWITCHING_ITALICS_OFF = u"""\
+Scenarist_SCC V1.0
+
+00:01:28;09	9420 942f 94ae 9420 9452 97a2 b031 6161 9470 9723 b031 6262
+
+00:01:31;10	9420 942f 94ae
+
+00:01:31;18	9420 9454 b032 e3e3 9458 97a1 91ae b032 6464 9470 97a1 b032 e5e5
+
+00:01:35;18	9420 942f 94ae
+
+00:01:40;25	942c
+
+00:01:51;18	9420 9452 97a1 b0b3 6161 94da 97a2 91ae b0b3 6262 9470 97a1 b0b3 e3e3
+
+00:01:55;22	9420 942f b034 6161 94f4 9723 b034 6262
+
+00:01:59;14	9420 942f 94ae 9420 94f4 b034 3180 e3e3
+
+00:02:02;01	9420 942f 94ae 9420 94d0 b0b5 6161 94f2 97a2 b0b5 6262
+
+00:02:04;05	9420 942f 94ae
+
+00:09:53;06	942c 9420 13f4 9723 b0b6 e3e3 9454 97a2 b0b6 6464 9470 97a2 b0b6 e5e5
+
+00:09:56;09	9420 942f 94ae 9420 94f2 b037 6161
+
+00:09:58;18	9420 942f 94ae 9420 9454 b038 6262 9454 97a2 91ae b038 e3e3 94f2 97a1 94f2 97a1 91ae b038 6162 6464
+
+00:09:59;28	9420 942f 94ae 9420 9452 97a2 e5e5 94f4 b0b9 6161
+
+00:10:02;22	9420 942f 94ae 9420 9452 97a1 31b0 e5e5 9470 97a2 31b0 6262
+
+00:10:04;10	9420 942f 94ae
+
+00:52:03;02	9420 9470 97a2 3131 e3e3
+
+00:52:18;20	9420 91d0 9723 3132 6464 9158 97a1 91ae 3132 e5e5 91da 97a2 9120 3132 6161 91f2 9723 3132 6262
+
+00:52:22;22	9420 942c 942f 9420 9152 97a2 31b3 e3e3
+
+00:52:25;04	9420 942c 942f 9420 91d0 97a2 3134 6464 91f2 e5e5
+
+00:52:26;28	9420 942c 942f
+
+00:52:27;18	9420 9152 9152 9152 91ae 31b5 6161 9154 97a1 9120 31b5 6262 9170 9723 31b5 e3e3
+
+00:52:31;22	9420 942c 942f
+
+00:52:34;14	942c
+
+00:53:03;15	9420 94f4 97a1 94f4 97a1 91ae 31b6 6464
 """

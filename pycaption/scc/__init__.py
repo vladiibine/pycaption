@@ -21,7 +21,7 @@ from .specialized_collections import (
     InterpretableNodeCreator)
 
 from .state_machines import (
-    DefaultProvidingItalicsTracker as ItalicStateTracker,
+    DefaultProvidingItalicsTracker,
     DefaultProvidingPositionTracker
 )
 
@@ -72,7 +72,8 @@ class SCCReader(BaseReader):
         self.time_translator = _SccTimeTranslator()
 
         self.node_creator_factory = NodeCreatorFactory(
-            ItalicStateTracker(), DefaultProvidingPositionTracker()
+            DefaultProvidingItalicsTracker(),
+            DefaultProvidingPositionTracker()
         )
 
         self.last_command = u''
