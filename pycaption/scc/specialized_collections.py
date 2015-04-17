@@ -264,7 +264,7 @@ class InterpretableNodeCreator(object):
             self._collection = collection
 
         self._position_tracer = position_tracker
-        self.italics_tracker = italics_tracker
+        self._italics_tracker = italics_tracker
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -324,18 +324,21 @@ class InterpretableNodeCreator(object):
 
         text = COMMANDS.get(command, u'')
 
-        if u'<$>{italic}<$>' in text:
-            self._collection.append(
-                _InterpretableNode.create_italics_style(
-                    self._position_tracer.get_current_position())
-            )
-        elif u'<$>{end-italic}<$>' in text:
-            self._collection.append(
-                _InterpretableNode.create_italics_style(
-                    self._position_tracer.get_current_position(),
-                    turn_on=False
+        if u'italic' in text:
+            if u'end' not in text:
+                self._italics_tracker.set_on()
+                self._collection.append(
+                    _InterpretableNode.create_italics_style(
+                        self._position_tracer.get_current_position())
                 )
-            )
+            else:
+                self._italics_tracker.set_off()
+                self._collection.append(
+                    _InterpretableNode.create_italics_style(
+                        self._position_tracer.get_current_position(),
+                        turn_on=False
+                    )
+                )
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes

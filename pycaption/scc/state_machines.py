@@ -144,4 +144,14 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
 class DefaultProvidingItalicsTracker(object):
     """
     """
-    default = False
+    def __init__(self, default=False):
+        self.value = default
+
+    def set_on(self):
+        self.value = True
+
+    def set_off(self):
+        self.value = False
+
+    def is_on(self):
+        return self.value
