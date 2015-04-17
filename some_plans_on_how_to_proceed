@@ -1,0 +1,22 @@
+la reader, ca sa scrie OK style nodes tre un italic tracker care:
+    - la fiecare skimbare de rand, sa puna <end-italic> la toate captionurile 
+
+
+StateMachine-ul:
+    - e setat ON cand vine comanda de pus on (91ae, 912f, 156e1, 136e, 946e, 926e, 914f, 97ce, 92ce, 16e7, 13ce, 91ef, 15ce, 976e, 164f, 154f, 92ef, 104f, 134f, 924f, 94ef, 15ef, 13ef, 91ce, 916d, 16ce, 944f, 974f, 97ef, 94ce, 10ce, 166e
+    - e setat OFF cand vine comanda 91ae 
+    - e setat OFF cand se comite un Caption
+
+
+
+InterpretableNodeCreator pune ON cand:
+    - vine comanda de pus on (sau oricare cu 'italic' in ea)
+    - inainte sa creeze new text node, daca tre skimbat positioningu, si Italics-State e ON
+    - inainte sa creeze new text node, daca... e primul nod din set si Italics-state e ON
+
+    pune OFF cand:
+    - vine comanda 9120, DACA era ON
+    -
+
+###THINGS:
+-highly faulty InterpretableNodeCreator.add_chars -> getting or creating a current text node; it adds characters to the last taxt node, even if style, positioning or break nodes came after it.... that's really bad basically; must just take the last node, and IF it's a text node, write to it, otherwise create a new node
