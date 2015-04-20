@@ -146,12 +146,26 @@ class DefaultProvidingItalicsTracker(object):
     """
     def __init__(self, default=False):
         self.value = default
+        self._requires_confirmation = False
 
     def set_on(self):
         self.value = True
 
     def set_off(self):
+        if self.value:
+            self._requires_confirmation = True
+
         self.value = False
 
     def is_on(self):
         return self.value
+
+    def acknowledge_italics_turned_off(self):
+        self._requires_confirmation = False
+
+    def can_end_italics(self):
+        """Return True if the italics state is on, or if the consumer has
+        never acknowledged having turned off the italics
+        :rtype: bool
+        """
+        return self.value or self._requires_confirmation

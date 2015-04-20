@@ -271,6 +271,48 @@ class InterpretableNodeCreator(object):
         """
         return not any(element.text for element in self._collection)
 
+    @staticmethod
+    def _create_nodes_if_repositioning(
+            current_position, italics_on, acknowledger):
+        """Create nodes that indicate the need to reposition, and if necessary,
+        additional nodes to signal the begin/end of italics
+
+        :type current_position: tuple[int]
+        :param current_position: the positioning to use for all the nodes
+
+        :type italics_on: bool
+        :param italics_on: if this is True, additional nodes, to mark the
+        begin and end of areas where text should be italicized.
+
+        :param acknowledger: a callable, used to acknowledge the tracker that
+            the italics was switched off
+
+        :rtype: tuple
+        :return a tuple (node, all_nodes). The node is a text node. The second
+        element is a list of all nodes created (including the text node)
+        """
+        resulted_nodes = []
+
+        if italics_on:
+            resulted_nodes.append(
+                _InterpretableNode.create_italics_style(
+                    current_position, turn_on=False)
+            )
+            acknowledger()
+        # this node will have a different positioning than the previous one
+        resulted_nodes.append(
+            _InterpretableNode.create_repositioning_command())
+        node = _InterpretableNode.create_text(current_position)
+
+        # then turn italics on again
+        if italics_on:
+            resulted_nodes.append(
+                _InterpretableNode.create_italics_style(current_position)
+            )
+        resulted_nodes.append(node)
+
+        return node, resulted_nodes
+
     def add_chars(self, *chars):
         """Adds characters to a text node (last text node, or a new one)
 
@@ -303,11 +345,11 @@ class InterpretableNodeCreator(object):
 
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
-            # this node will have a different positioning than the previous one
-            self._collection.append(
-                _InterpretableNode.create_repositioning_command())
-            node = _InterpretableNode.create_text(current_position)
-            self._collection.append(node)
+            node, resulted_nodes = self._create_nodes_if_repositioning(
+                current_position, self._italics_tracker.can_end_italics(),
+                self._italics_tracker.acknowledge_italics_turned_off
+            )
+            self._collection.extend(resulted_nodes)
             self._position_tracer.acknowledge_position_changed()
 
         node.add_chars(*chars)
@@ -333,12 +375,6 @@ class InterpretableNodeCreator(object):
                 )
             else:
                 self._italics_tracker.set_off()
-                self._collection.append(
-                    _InterpretableNode.create_italics_style(
-                        self._position_tracer.get_current_position(),
-                        turn_on=False
-                    )
-                )
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -358,6 +394,14 @@ class InterpretableNodeCreator(object):
             self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
+        if self._italics_tracker.can_end_italics():
+            self._collection.append(
+                _InterpretableNode.create_italics_style(
+                    position=self._position_tracer.get_current_position(),
+                    turn_on=False
+                )
+            )
+
         return iter(self._collection)
 
     @classmethod
@@ -480,6 +524,12 @@ class _InterpretableNode(object):
         :rtype: bool
         """
         return self._type == self.ITALICS_OFF
+
+    def is_italics_node(self):
+        """
+        :rtype: bool
+        """
+        return self._type in (self.ITALICS_OFF, self.ITALICS_ON)
 
     def requires_repositioning(self):
         """Whether the node must be interpreted as a change in positioning

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import unittest
+from pycaption.scc.specialized_collections import InterpretableNodeCreator
 
 from pycaption import SCCReader, CaptionReadNoCaptions
+from pycaption.scc.state_machines import (DefaultProvidingItalicsTracker,
+                                          DefaultProvidingPositionTracker)
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
@@ -125,12 +128,6 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(expected_caption_layouts, actual_caption_layouts)
 
 
-class DummyTests(unittest.TestCase):
-    def test_style_tags_are_properly_closed(self):
-        caption_set = SCCReader().read(
-            SAMPLE_SCC_NOT_EXPLICITLY_SWITCHING_ITALICS_OFF)
-
-
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
      This class includes tests that ensure that at the very least, we don't
@@ -211,6 +208,143 @@ class CoverageOnlyTestCase(unittest.TestCase):
         actual_timings = [
             (c_.start, c_.end) for c_ in scc1.get_captions(u'en-US')]
         self.assertEqual(expected_timings, actual_timings)
+
+
+class InterpretableNodeCreatorTestCase(unittest.TestCase):
+    def test_style_nodes_must_envelop_text_and_generated_linebreaks(self):
+        node_creator = InterpretableNodeCreator(
+            italics_tracker=(DefaultProvidingItalicsTracker()),
+            position_tracker=(DefaultProvidingPositionTracker()))
+
+        # positioning 1
+        node_creator.interpret_command('94d0')  # row 14, col 0
+        node_creator.interpret_command('91ae')  # italics on
+        node_creator.add_chars('a')
+
+        node_creator.interpret_command('9470')  # row 15 col 0
+        node_creator.add_chars('b')
+
+        result = list(node_creator)
+        # First node marks that italics should be on
+        self.assertTrue(result[0].is_italics_node())
+        self.assertTrue(result[0].sets_italics_on())
+
+        # Last node turns off italics
+        self.assertTrue(result[-1].is_italics_node())
+        self.assertTrue(result[-1].sets_italics_off())
+
+    def test_style_nodes_must_envelop_text_with_different_positioning(self):
+        node_creator = InterpretableNodeCreator(
+            italics_tracker=(DefaultProvidingItalicsTracker()),
+            position_tracker=(DefaultProvidingPositionTracker()))
+
+        # positioning 1
+        node_creator.interpret_command('94d0')  # row 14, col 0
+        node_creator.interpret_command('91ae')  # italics on
+        node_creator.add_chars('a')
+
+        node_creator.interpret_command('97d0')  # row 9 col 0
+        node_creator.add_chars('b')
+
+        result = list(node_creator)
+
+        # First node sets italics on
+        self.assertTrue(result[0].is_italics_node())
+        self.assertTrue(result[0].sets_italics_on())
+
+        # After the text node, the next one sets the italics off
+        self.assertTrue(result[2].is_italics_node())
+        self.assertTrue(result[2].sets_italics_off())
+
+        # We then break into a new position
+        self.assertTrue(result[3].requires_repositioning())
+
+        # And immediately set the italics on again
+        self.assertTrue(result[4].is_italics_node())
+        self.assertTrue(result[4].sets_italics_on())
+
+    def test_explicitly_turning_off_italics_when_reusing_positioning(self):
+        node_creator = InterpretableNodeCreator(
+            italics_tracker=(DefaultProvidingItalicsTracker()),
+            position_tracker=(DefaultProvidingPositionTracker()))
+
+        # positioning 1
+        node_creator.interpret_command('1370')  # row 13, col 0
+        node_creator.interpret_command('9120')  # italics off
+        node_creator.add_chars('a')
+
+        node_creator.interpret_command('94d0')  # row 14 col 0
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.add_chars('b')
+        node_creator.interpret_command('9120')  # italics OFF
+
+        node_creator.interpret_command('9470')  # row 15 col 0
+        node_creator.add_chars('c')
+
+        result = list(node_creator)
+
+        self.assertTrue(result[0].is_text_node())
+
+        self.assertTrue(result[1].is_italics_node())
+        self.assertTrue(result[1].sets_italics_on())
+
+        self.assertTrue(result[-1].is_italics_node())
+        self.assertTrue(result[-1].sets_italics_off())
+
+        italics_nodes_count = len(
+            [node_ for node_ in result if node_.is_italics_node()])
+        self.assertEqual(italics_nodes_count, 2)
+
+    def test_explicitly_turning_off_italics_when_changing_positioning(self):
+        node_creator = InterpretableNodeCreator(
+            italics_tracker=(DefaultProvidingItalicsTracker()),
+            position_tracker=(DefaultProvidingPositionTracker()))
+
+        # positioning 1
+        node_creator.interpret_command('9470')  # row 15, col 0
+        node_creator.interpret_command('9120')  # italics off
+        node_creator.add_chars('a')
+
+        node_creator.interpret_command('9770')  # row 10 col 0
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.add_chars('b')
+        node_creator.interpret_command('9120')  # italics OFF
+
+        node_creator.interpret_command('1570')  # row 6 col 0
+        node_creator.add_chars('c')
+        node_creator.interpret_command('91ae')
+
+        node_creator.interpret_command('9270')  # row 6 col 0
+        node_creator.add_chars('d')
+
+        result = list(node_creator)
+
+        # No style node has been inserted, even though we explicitly
+        # turned off italics - because italics hadn't been turned on previously
+        self.assertTrue(result[0].is_text_node())
+
+        position_change_nodes = [node for node in result if
+                                 node.requires_repositioning()]
+
+        last_positioning_node = position_change_nodes[-1]
+        idx = result.index(last_positioning_node)
+        previous_node = result[idx - 1]
+
+        # There should be an auto-inserted node that switches italics off
+        # before repositioning
+        self.assertTrue(previous_node.is_italics_node())
+        self.assertTrue(previous_node.sets_italics_off())
+
+        # There should be an auto-inserted node that switches italics on after
+        # the repositioning
+        next_node = result[idx + 1]
+        self.assertTrue(next_node.is_italics_node())
+        self.assertTrue(next_node.sets_italics_on())
+
+        self.assertTrue(result[-1].is_italics_node())
+        self.assertTrue(result[-1].sets_italics_off())
+
+        self.fail("not good really")
 
 
 SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0

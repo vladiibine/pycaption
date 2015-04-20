@@ -39,15 +39,11 @@ class SCCtoDFXPTestCase(unittest.TestCase):
 
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
 
-
-class DummyTest(unittest.TestCase):
-    def test_will_rename_this_later(self):
-        # import pydevd; pydevd.settrace('172.16.65.1')
+    def test_dfxp_is_valid_xml_when_scc_source_has_weird_italic_commands(self):
         caption_set = SCCReader().read(SAMPLE_SCC_PRODUCED_INVALID_DFXP)
 
         dfxp = DFXPWriter().write(caption_set)
-
-        x = 1
+        self.fail("Not implemented")
 
 
 SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
