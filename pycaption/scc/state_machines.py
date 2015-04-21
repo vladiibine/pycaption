@@ -142,30 +142,52 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
 
 
 class DefaultProvidingItalicsTracker(object):
-    """
+    """State machine-like object, that keeps track of the required italic state
+    of the caption text.
     """
     def __init__(self, default=False):
-        self.value = default
-        self._requires_confirmation = False
+        self._value = default
+        self._switched_off_count = False
+        self._switched_on_count = False
 
-    def set_on(self):
-        self.value = True
+    def command_on(self):
+        """Marks the requirement to begin italicising text
+        """
+        if not self._value:
+            self._switched_on_count = True
 
-    def set_off(self):
-        if self.value:
-            self._requires_confirmation = True
+        self._value = True
 
-        self.value = False
+    def command_off(self):
+        """Marks the requirement to end italicising the text
+        """
+        if self._value:
+            self._switched_off_count = True
 
-    def is_on(self):
-        return self.value
+        self._value = False
 
-    def acknowledge_italics_turned_off(self):
-        self._requires_confirmation = False
+    def acknowledge_switched(self, on=True):
+        if on:
+            self._switched_on_count = False
+        else:
+            self._switched_off_count = False
 
     def can_end_italics(self):
         """Return True if the italics state is on, or if the consumer has
         never acknowledged having turned off the italics
+
         :rtype: bool
         """
-        return self.value or self._requires_confirmation
+        return self._switched_on_count
+
+    def is_on(self):
+        return self._value and not self._switched_on_count
+
+    def should_confirm_on(self):
+        return self._switched_on_count
+
+    def should_confirm_off(self):
+        return self._switched_off_count
+
+    def state_changed(self):
+        return self._switched_off_count or self._switched_on_count

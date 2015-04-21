@@ -271,48 +271,6 @@ class InterpretableNodeCreator(object):
         """
         return not any(element.text for element in self._collection)
 
-    @staticmethod
-    def _create_nodes_if_repositioning(
-            current_position, italics_on, acknowledger):
-        """Create nodes that indicate the need to reposition, and if necessary,
-        additional nodes to signal the begin/end of italics
-
-        :type current_position: tuple[int]
-        :param current_position: the positioning to use for all the nodes
-
-        :type italics_on: bool
-        :param italics_on: if this is True, additional nodes, to mark the
-        begin and end of areas where text should be italicized.
-
-        :param acknowledger: a callable, used to acknowledge the tracker that
-            the italics was switched off
-
-        :rtype: tuple
-        :return a tuple (node, all_nodes). The node is a text node. The second
-        element is a list of all nodes created (including the text node)
-        """
-        resulted_nodes = []
-
-        if italics_on:
-            resulted_nodes.append(
-                _InterpretableNode.create_italics_style(
-                    current_position, turn_on=False)
-            )
-            acknowledger()
-        # this node will have a different positioning than the previous one
-        resulted_nodes.append(
-            _InterpretableNode.create_repositioning_command())
-        node = _InterpretableNode.create_text(current_position)
-
-        # then turn italics on again
-        if italics_on:
-            resulted_nodes.append(
-                _InterpretableNode.create_italics_style(current_position)
-            )
-        resulted_nodes.append(node)
-
-        return node, resulted_nodes
-
     def add_chars(self, *chars):
         """Adds characters to a text node (last text node, or a new one)
 
@@ -324,11 +282,14 @@ class InterpretableNodeCreator(object):
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        text_nodes = [
-            elem_ for elem_ in self._collection if elem_.is_text_node()
-        ]
-        if text_nodes:
-            node = text_nodes[-1]
+        # text_nodes = [
+        #     elem_ for elem_ in self._collection if elem_.is_text_node()
+        # ]
+        # if text_nodes:
+        #     node = text_nodes[-1]
+        if (self._collection and self._collection[-1].is_text_node()
+                and not self._position_tracer.is_repositioning_required()):
+            node = self._collection[-1]
         else:
             # create first node
             node = _InterpretableNode(position=current_position)
@@ -345,11 +306,16 @@ class InterpretableNodeCreator(object):
 
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
-            node, resulted_nodes = self._create_nodes_if_repositioning(
-                current_position, self._italics_tracker.can_end_italics(),
-                self._italics_tracker.acknowledge_italics_turned_off
+            # node, resulted_nodes = self._create_nodes_if_repositioning(
+            #     current_position, self._italics_tracker.can_end_italics(),
+            #     self._italics_tracker.acknowledge_italics_turned_off
+            # )
+            # self._collection.extend(resulted_nodes)
+            self._collection.append(
+                _InterpretableNode.create_repositioning_command()
             )
-            self._collection.extend(resulted_nodes)
+            node = _InterpretableNode.create_text(current_position)
+            self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
         node.add_chars(*chars)
@@ -375,6 +341,12 @@ class InterpretableNodeCreator(object):
                 )
             else:
                 self._italics_tracker.set_off()
+                self._collection.append(
+                    _InterpretableNode.create_italics_style(
+                        self._position_tracer.get_current_position(),
+                        turn_on=False
+                    )
+                )
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
