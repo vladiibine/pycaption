@@ -365,14 +365,29 @@ class InterpretableNodeCreator(object):
         else:
             self._position_tracer.update_positioning(positioning)
 
+    @staticmethod
+    def _skip_initial_italics_off_nodes(collection):
+        new_collection = []
+        can_add_italics_off_nodes = False
+
+        for node in collection:
+            if node.is_italics_node() and node.sets_italics_on():
+                can_add_italics_off_nodes = True
+                new_collection.append(node)
+                
+
+
+        pass
+
     def __iter__(self):
-        if self._italics_tracker.can_end_italics():
-            self._collection.append(
-                _InterpretableNode.create_italics_style(
-                    position=self._position_tracer.get_current_position(),
-                    turn_on=False
-                )
-            )
+        new_collection = self._skip_initial_italics_off_nodes(self._collection)
+        # if self._italics_tracker.can_end_italics():
+        #     self._collection.append(
+        #         _InterpretableNode.create_italics_style(
+        #             position=self._position_tracer.get_current_position(),
+        #             turn_on=False
+        #         )
+        #     )
 
         return iter(self._collection)
 
