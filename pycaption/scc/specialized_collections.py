@@ -334,13 +334,13 @@ class InterpretableNodeCreator(object):
 
         if u'italic' in text:
             if u'end' not in text:
-                self._italics_tracker.set_on()
+                self._italics_tracker.command_on()
                 self._collection.append(
                     _InterpretableNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
             else:
-                self._italics_tracker.set_off()
+                self._italics_tracker.command_off()
                 self._collection.append(
                     _InterpretableNode.create_italics_style(
                         self._position_tracer.get_current_position(),
@@ -367,29 +367,83 @@ class InterpretableNodeCreator(object):
 
     @staticmethod
     def _skip_initial_italics_off_nodes(collection):
+        """Return a collection like the one given, but without the
+        initial <Italics OFF> nodes
+        """
         new_collection = []
         can_add_italics_off_nodes = False
 
         for node in collection:
-            if node.is_italics_node() and node.sets_italics_on():
-                can_add_italics_off_nodes = True
+            if node.is_italics_node():
+                if node.sets_italics_on():
+                    can_add_italics_off_nodes = True
+                    new_collection.append(node)
+                elif can_add_italics_off_nodes:
+                    new_collection.append(node)
+            else:
                 new_collection.append(node)
-                
 
+        return new_collection
+
+    @staticmethod
+    def _skip_empty_text_nodes(collection):
+        """Return an iterable containing all the nodes in the previous
+        collection except for the empty text nodes
+        """
+        return [node for node in collection
+                if not (node.is_text_node() and node.is_empty())]
+
+    @staticmethod
+    def _skip_redundant_italics_nodes(collection):
+        """Return a list where the <Italics On> nodes only appear after
+        <Italics OFF>, and vice versa. This ignores the other node types, and
+        only removes redundant italic nodes
+        """
+        new_collection = []
+        state = None
+
+        for node in collection:
+            if node.is_italics_node():
+                if state is None:
+                    state = node.sets_italics_on()
+                    new_collection.append(node)
+                    continue
+                # skip the nodes that are like the previous
+                if node.sets_italics_on() is state:
+                    continue
+                else:
+                    state = node.sets_italics_on()
+            new_collection.append(node)
+
+        return new_collection
+
+    @staticmethod
+    def _move_italics_on_nodes_after_positioning_nodes(collection):
+        """If nodes that switch italics on appear just before the
+        nodes that change position, switch their order
+        """
+        new_collection = []
+
+        for idx, node in enumerate(collection):
+            if not node.is_italics_node() and node.sets_italics_on():
+                new_collection.append(node)
+            else:
+                pass
 
         pass
 
     def __iter__(self):
         new_collection = self._skip_initial_italics_off_nodes(self._collection)
-        # if self._italics_tracker.can_end_italics():
-        #     self._collection.append(
-        #         _InterpretableNode.create_italics_style(
-        #             position=self._position_tracer.get_current_position(),
-        #             turn_on=False
-        #         )
-        #     )
 
-        return iter(self._collection)
+        new_collection = self._skip_empty_text_nodes(new_collection)
+
+        new_collection = self._skip_redundant_italics_nodes(new_collection)
+
+        new_collection = self._move_italics_on_nodes_after_positioning_nodes(
+            new_collection
+        )
+
+        return iter(new_collection)
 
     @classmethod
     def from_list(cls, stash_list, italics_tracker, position_tracker):

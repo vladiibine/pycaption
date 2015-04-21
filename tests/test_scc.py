@@ -312,6 +312,10 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         node_creator.interpret_command('9770')  # row 10 col 0
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.add_chars('b')
+        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.add_chars('b')
+        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.add_chars('b')
         node_creator.interpret_command('9120')  # italics OFF
 
         node_creator.interpret_command('1570')  # row 6 col 0
