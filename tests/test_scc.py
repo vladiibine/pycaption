@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
-from pycaption.scc.specialized_collections import InterpretableNodeCreator
+from pycaption.scc.specialized_collections import RepresentableNodeCreator
 
 from pycaption import SCCReader, CaptionReadNoCaptions
 from pycaption.scc.state_machines import (DefaultProvidingItalicsTracker,
@@ -212,7 +212,7 @@ class CoverageOnlyTestCase(unittest.TestCase):
 
 class InterpretableNodeCreatorTestCase(unittest.TestCase):
     def test_style_nodes_must_envelop_text_and_generated_linebreaks(self):
-        node_creator = InterpretableNodeCreator(
+        node_creator = RepresentableNodeCreator(
             italics_tracker=(DefaultProvidingItalicsTracker()),
             position_tracker=(DefaultProvidingPositionTracker()))
 
@@ -234,7 +234,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[-1].sets_italics_off())
 
     def test_style_nodes_must_envelop_text_with_different_positioning(self):
-        node_creator = InterpretableNodeCreator(
+        node_creator = RepresentableNodeCreator(
             italics_tracker=(DefaultProvidingItalicsTracker()),
             position_tracker=(DefaultProvidingPositionTracker()))
 
@@ -268,7 +268,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[-1].sets_italics_off())
 
     def test_explicitly_turning_off_italics_when_reusing_positioning(self):
-        node_creator = InterpretableNodeCreator(
+        node_creator = RepresentableNodeCreator(
             italics_tracker=(DefaultProvidingItalicsTracker()),
             position_tracker=(DefaultProvidingPositionTracker()))
 
@@ -300,7 +300,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertEqual(italics_nodes_count, 2)
 
     def test_explicitly_turning_off_italics_when_changing_positioning(self):
-        node_creator = InterpretableNodeCreator(
+        node_creator = RepresentableNodeCreator(
             italics_tracker=(DefaultProvidingItalicsTracker()),
             position_tracker=(DefaultProvidingPositionTracker()))
 

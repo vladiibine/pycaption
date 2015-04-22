@@ -18,7 +18,7 @@ from .constants import (
 )
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    InterpretableNodeCreator)
+    RepresentableNodeCreator)
 
 from .state_machines import (
     DefaultProvidingItalicsTracker,
@@ -29,14 +29,14 @@ from .state_machines import (
 class NodeCreatorFactory(object):
     """Will return instances of the given node_creator.
 
-    This is used as a means of creating new InterpretableNodeCreator instances,
+    This is used as a means of creating new RepresentableNodeCreator instances,
     because these need to share state beyond their garbage collection, but
     storing the information at the class level is not good either, because
     this information must be erased after the reader's .read() operation
     completes.
     """
     def __init__(self, italics_tracker, position_tracker,
-                 node_creator=InterpretableNodeCreator):
+                 node_creator=RepresentableNodeCreator):
         self.italics_tracker = italics_tracker
         self.position_tracker = position_tracker
         self.node_creator = node_creator

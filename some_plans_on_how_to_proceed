@@ -9,7 +9,7 @@ StateMachine-ul:
 
 
 
-InterpretableNodeCreator pune ON cand:
+RepresentableNodeCreator pune ON cand:
     - vine comanda de pus on (sau oricare cu 'italic' in ea)
     - inainte sa creeze new text node, daca tre skimbat positioningu, si Italics-State e ON
     - inainte sa creeze new text node, daca... e primul nod din set si Italics-state e ON
@@ -20,4 +20,4 @@ InterpretableNodeCreator pune ON cand:
     -
 
 ###THINGS:
--highly faulty InterpretableNodeCreator.add_chars -> getting or creating a current text node; it adds characters to the last taxt node, even if style, positioning or break nodes came after it.... that's really bad basically; must just take the last node, and IF it's a text node, write to it, otherwise create a new node
+-highly faulty RepresentableNodeCreator.add_chars -> getting or creating a current text node; it adds characters to the last taxt node, even if style, positioning or break nodes came after it.... that's really bad basically; must just take the last node, and IF it's a text node, write to it, otherwise create a new node

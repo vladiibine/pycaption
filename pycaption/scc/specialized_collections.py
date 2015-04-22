@@ -123,7 +123,7 @@ class CaptionCreator(object):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
-        :type node_buffer: InterpretableNodeCreator
+        :type node_buffer: RepresentableNodeCreator
 
         :type start: int
         :param start: the start time in microseconds
@@ -241,9 +241,8 @@ class CaptionCreator(object):
         return list(self._collection)
 
 
-class InterpretableNodeCreator(object):
-    """Creates _InterpretableNode instances from characters and commands,
-    and stores them internally in a buffer.
+class RepresentableNodeCreator(object):
+    """Creates _RepresentableNode instances from characters and commands.
     """
     def __init__(self, collection=None, italics_tracker=None,
                  position_tracker=None):
@@ -292,15 +291,15 @@ class InterpretableNodeCreator(object):
             node = self._collection[-1]
         else:
             # create first node
-            node = _InterpretableNode(position=current_position)
+            node = _InstructionNode(position=current_position)
             self._collection.append(node)
 
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
             # must insert a line break here
-            self._collection.append(_InterpretableNode.create_break(
+            self._collection.append(_InstructionNode.create_break(
                 position=current_position))
-            node = _InterpretableNode.create_text(current_position)
+            node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
 
@@ -312,9 +311,11 @@ class InterpretableNodeCreator(object):
             # )
             # self._collection.extend(resulted_nodes)
             self._collection.append(
-                _InterpretableNode.create_repositioning_command()
+                _InstructionNode.create_repositioning_command(
+                    current_position
+                )
             )
-            node = _InterpretableNode.create_text(current_position)
+            node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
@@ -336,13 +337,13 @@ class InterpretableNodeCreator(object):
             if u'end' not in text:
                 self._italics_tracker.command_on()
                 self._collection.append(
-                    _InterpretableNode.create_italics_style(
+                    _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
             else:
                 self._italics_tracker.command_off()
                 self._collection.append(
-                    _InterpretableNode.create_italics_style(
+                    _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position(),
                         turn_on=False
                     )
@@ -418,28 +419,84 @@ class InterpretableNodeCreator(object):
         return new_collection
 
     @staticmethod
-    def _move_italics_on_nodes_after_positioning_nodes(collection):
-        """If nodes that switch italics on appear just before the
-        nodes that change position, switch their order
+    def _convert_instruction_to_representable_nodes(collection):
+        """Aggregate and convert instruction nodes, to representable
+        nodes
         """
         new_collection = []
 
-        for idx, node in enumerate(collection):
-            if not node.is_italics_node() and node.sets_italics_on():
-                new_collection.append(node)
-            else:
-                pass
+        node = None
 
-        pass
+        for instruction in collection:
+            if instruction.is_text_node():
+                # flush previous _RepresentableNode that represents commands
+                if node is not None:
+                    new_collection.append(node)
+                    node = None
+                new_collection.append(_RepresentableNode(instruction))
+            else:
+                if node is None:
+                    node = _RepresentableNode()
+                node.add_instruction(instruction)
+
+        if node is not None:
+            new_collection.append(node)
+
+        return new_collection
+
+    @staticmethod
+    def _ensure_italics_close_properly(collection):
+        """Make sure that for every opened italic node, there's a corresponding
+         closing node.
+
+         Will insert a closing italic node, before each repositioning node
+
+         :type collection: list[_InstructionNode]
+         :rtype: list[_InstructionNode]
+        """
+        new_collection = []
+
+        italics_on = False
+        last_italics_on_node = None
+
+        for idx, node in enumerate(collection):
+            if node.is_italics_node() and node.sets_italics_on():
+                italics_on = True
+                last_italics_on_node = node
+            if node.is_italics_node() and node.sets_italics_off():
+                italics_on = False
+            if node.requires_repositioning() and italics_on:
+                # Append an italics closing node before the position change
+                new_collection.append(
+                    _InstructionNode.create_italics_style(
+                        # The position info of this new node should be the same
+                        position=last_italics_on_node.position,
+                        turn_on=False
+                    )
+                )
+                new_collection.append(node)
+                # Append an italics opening node after the positioning change
+                new_collection.append(
+                    _InstructionNode.create_italics_style(
+                        position=node.position
+                    )
+                )
+                continue
+            new_collection.append(node)
+
+        return new_collection
 
     def __iter__(self):
+        # This guarantees the first italics node will turn italics ON, not off.
         new_collection = self._skip_initial_italics_off_nodes(self._collection)
 
         new_collection = self._skip_empty_text_nodes(new_collection)
 
         new_collection = self._skip_redundant_italics_nodes(new_collection)
 
-        new_collection = self._move_italics_on_nodes_after_positioning_nodes(
+        new_collection = self._ensure_italics_close_properly(new_collection)
+
+        new_collection = self._convert_instruction_to_representable_nodes(
             new_collection
         )
 
@@ -451,7 +508,7 @@ class InterpretableNodeCreator(object):
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
 
-        :type stash_list: list[InterpretableNodeCreator]
+        :type stash_list: list[RepresentableNodeCreator]
         :param stash_list: a list of instances of this class
 
         :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
@@ -462,7 +519,7 @@ class InterpretableNodeCreator(object):
         :param position_tracker: state machine to be interrogated about the
             positioning when creating a node
 
-        :rtype: InterpretableNodeCreator
+        :rtype: RepresentableNodeCreator
         """
         instance = cls(italics_tracker=italics_tracker,
                        position_tracker=position_tracker)
@@ -501,9 +558,12 @@ def _get_layout_from_tuple(position_tuple):
     return Layout(origin=Point(horizontal, vertical))
 
 
-class _InterpretableNode(object):
+class _InstructionNode(object):
     """Value object, that can contain text information, or interpretable
-    commands (such as explicit line breaks or turning italics on/off)
+    commands (such as explicit line breaks or turning italics on/off).
+
+    These nodes will be aggregated into a RepresentableNode, which will then
+    be easily converted to a CaptionNode.
     """
     TEXT = 0
     BREAK = 1
@@ -591,7 +651,7 @@ class _InterpretableNode(object):
         :type position: tuple[int]
         :param position: a tuple (row, col) containing the positioning info
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(type_=cls.BREAK, position=position)
 
@@ -605,7 +665,7 @@ class _InterpretableNode(object):
         :type chars: tuple[unicode]
         :param chars: characters to add to the text
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(u''.join(chars), position=position)
 
@@ -619,7 +679,7 @@ class _InterpretableNode(object):
         :type turn_on: bool
         :param turn_on: whether to turn the italics on or off
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(
             position=position,
@@ -627,7 +687,7 @@ class _InterpretableNode(object):
         )
 
     @classmethod
-    def create_repositioning_command(cls):
+    def create_repositioning_command(cls, position=None):
         """Create node interpretable as a command to change the current
         position
         """
@@ -646,3 +706,33 @@ class _InterpretableNode(object):
             extra = u'change position'
 
         return u'<INode: {extra} >'.format(extra=extra)
+
+
+class _RepresentableNode(object):
+    """A node type that can be directly represented as one or multiple
+     CaptionNode's
+
+    Will either contain text, or meta commands (line break, turn italics on/off
+    or reposition)
+    """
+    def __init__(self, text_node=None):
+        self.text_node = text_node
+        self.command_nodes = []
+        # self.command_nodes = command_nodes if command_nodes else None
+
+    def to_caption_nodes(self):
+        pass
+
+    def add_instruction(self, instruction):
+        self.command_nodes.append(instruction)
+
+    def __repr__(self):
+        if self.text_node is not None:
+            message = u'"{}"'.format(self.text_node.get_text())
+        else:
+            message = u"{num} cmds: {cmds}".format(
+                num=len(self.command_nodes),
+                cmds=repr(self.command_nodes)
+            )
+
+        return u"<RNode: {}>".format(message)
