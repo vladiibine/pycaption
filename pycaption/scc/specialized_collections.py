@@ -123,7 +123,7 @@ class CaptionCreator(object):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
-        :type node_buffer: RepresentableNodeCreator
+        :type node_buffer: InstructionNodeCreator
 
         :type start: int
         :param start: the start time in microseconds
@@ -241,18 +241,13 @@ class CaptionCreator(object):
         return list(self._collection)
 
 
-class RepresentableNodeCreator(object):
-    """Creates _RepresentableNode instances from characters and commands.
+class InstructionNodeCreator(object):
+    """Creates _InstructionNode instances from characters and commands, storing
+    them internally
     """
-    def __init__(self, collection=None, italics_tracker=None,
-                 position_tracker=None):
+    def __init__(self, collection=None, position_tracker=None):
         """
         :param collection: an optional collection of nodes
-
-        :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
-        :param italics_tracker: object that cna be interrogated to get the
-            italics state of the nodes we're creating (whether italics
-            should be on or off)
 
         :param position_tracker:
         :return:
@@ -263,7 +258,6 @@ class RepresentableNodeCreator(object):
             self._collection = collection
 
         self._position_tracer = position_tracker
-        self._italics_tracker = italics_tracker
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -281,11 +275,6 @@ class RepresentableNodeCreator(object):
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        # text_nodes = [
-        #     elem_ for elem_ in self._collection if elem_.is_text_node()
-        # ]
-        # if text_nodes:
-        #     node = text_nodes[-1]
         if (self._collection and self._collection[-1].is_text_node()
                 and not self._position_tracer.is_repositioning_required()):
             node = self._collection[-1]
@@ -305,11 +294,6 @@ class RepresentableNodeCreator(object):
 
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
-            # node, resulted_nodes = self._create_nodes_if_repositioning(
-            #     current_position, self._italics_tracker.can_end_italics(),
-            #     self._italics_tracker.acknowledge_italics_turned_off
-            # )
-            # self._collection.extend(resulted_nodes)
             self._collection.append(
                 _InstructionNode.create_repositioning_command(
                     current_position
@@ -335,13 +319,11 @@ class RepresentableNodeCreator(object):
 
         if u'italic' in text:
             if u'end' not in text:
-                self._italics_tracker.command_on()
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
             else:
-                self._italics_tracker.command_off()
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position(),
@@ -366,141 +348,8 @@ class RepresentableNodeCreator(object):
         else:
             self._position_tracer.update_positioning(positioning)
 
-    @staticmethod
-    def _skip_initial_italics_off_nodes(collection):
-        """Return a collection like the one given, but without the
-        initial <Italics OFF> nodes
-        """
-        new_collection = []
-        can_add_italics_off_nodes = False
-
-        for node in collection:
-            if node.is_italics_node():
-                if node.sets_italics_on():
-                    can_add_italics_off_nodes = True
-                    new_collection.append(node)
-                elif can_add_italics_off_nodes:
-                    new_collection.append(node)
-            else:
-                new_collection.append(node)
-
-        return new_collection
-
-    @staticmethod
-    def _skip_empty_text_nodes(collection):
-        """Return an iterable containing all the nodes in the previous
-        collection except for the empty text nodes
-        """
-        return [node for node in collection
-                if not (node.is_text_node() and node.is_empty())]
-
-    @staticmethod
-    def _skip_redundant_italics_nodes(collection):
-        """Return a list where the <Italics On> nodes only appear after
-        <Italics OFF>, and vice versa. This ignores the other node types, and
-        only removes redundant italic nodes
-        """
-        new_collection = []
-        state = None
-
-        for node in collection:
-            if node.is_italics_node():
-                if state is None:
-                    state = node.sets_italics_on()
-                    new_collection.append(node)
-                    continue
-                # skip the nodes that are like the previous
-                if node.sets_italics_on() is state:
-                    continue
-                else:
-                    state = node.sets_italics_on()
-            new_collection.append(node)
-
-        return new_collection
-
-    @staticmethod
-    def _convert_instruction_to_representable_nodes(collection):
-        """Aggregate and convert instruction nodes, to representable
-        nodes
-        """
-        new_collection = []
-
-        node = None
-
-        for instruction in collection:
-            if instruction.is_text_node():
-                # flush previous _RepresentableNode that represents commands
-                if node is not None:
-                    new_collection.append(node)
-                    node = None
-                new_collection.append(_RepresentableNode(instruction))
-            else:
-                if node is None:
-                    node = _RepresentableNode()
-                node.add_instruction(instruction)
-
-        if node is not None:
-            new_collection.append(node)
-
-        return new_collection
-
-    @staticmethod
-    def _ensure_italics_close_properly(collection):
-        """Make sure that for every opened italic node, there's a corresponding
-         closing node.
-
-         Will insert a closing italic node, before each repositioning node
-
-         :type collection: list[_InstructionNode]
-         :rtype: list[_InstructionNode]
-        """
-        new_collection = []
-
-        italics_on = False
-        last_italics_on_node = None
-
-        for idx, node in enumerate(collection):
-            if node.is_italics_node() and node.sets_italics_on():
-                italics_on = True
-                last_italics_on_node = node
-            if node.is_italics_node() and node.sets_italics_off():
-                italics_on = False
-            if node.requires_repositioning() and italics_on:
-                # Append an italics closing node before the position change
-                new_collection.append(
-                    _InstructionNode.create_italics_style(
-                        # The position info of this new node should be the same
-                        position=last_italics_on_node.position,
-                        turn_on=False
-                    )
-                )
-                new_collection.append(node)
-                # Append an italics opening node after the positioning change
-                new_collection.append(
-                    _InstructionNode.create_italics_style(
-                        position=node.position
-                    )
-                )
-                continue
-            new_collection.append(node)
-
-        return new_collection
-
     def __iter__(self):
-        # This guarantees the first italics node will turn italics ON, not off.
-        new_collection = self._skip_initial_italics_off_nodes(self._collection)
-
-        new_collection = self._skip_empty_text_nodes(new_collection)
-
-        new_collection = self._skip_redundant_italics_nodes(new_collection)
-
-        new_collection = self._ensure_italics_close_properly(new_collection)
-
-        new_collection = self._convert_instruction_to_representable_nodes(
-            new_collection
-        )
-
-        return iter(new_collection)
+        return iter(_format_italics(self._collection))
 
     @classmethod
     def from_list(cls, stash_list, italics_tracker, position_tracker):
@@ -508,7 +357,7 @@ class RepresentableNodeCreator(object):
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
 
-        :type stash_list: list[RepresentableNodeCreator]
+        :type stash_list: list[InstructionNodeCreator]
         :param stash_list: a list of instances of this class
 
         :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
@@ -519,7 +368,7 @@ class RepresentableNodeCreator(object):
         :param position_tracker: state machine to be interrogated about the
             positioning when creating a node
 
-        :rtype: RepresentableNodeCreator
+        :rtype: InstructionNodeCreator
         """
         instance = cls(italics_tracker=italics_tracker,
                        position_tracker=position_tracker)
@@ -690,10 +539,12 @@ class _InstructionNode(object):
     def create_repositioning_command(cls, position=None):
         """Create node interpretable as a command to change the current
         position
-        """
-        return cls(type_=cls.CHANGE_POSITION)
 
-    def __repr__(self):
+        :type position:
+        """
+        return cls(type_=cls.CHANGE_POSITION, position=position)
+
+    def __repr__(self):         # pragma: no cover
         if self._type == self.BREAK:
             extra = u'BR'
         elif self._type == self.TEXT:
@@ -708,31 +559,177 @@ class _InstructionNode(object):
         return u'<INode: {extra} >'.format(extra=extra)
 
 
-class _RepresentableNode(object):
-    """A node type that can be directly represented as one or multiple
-     CaptionNode's
+def _format_italics(collection):
+    """Given a raw list of _InstructionNodes, returns a new equivalent list
+    where all the italics nodes properly close and open
 
-    Will either contain text, or meta commands (line break, turn italics on/off
-    or reposition)
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
     """
-    def __init__(self, text_node=None):
-        self.text_node = text_node
-        self.command_nodes = []
-        # self.command_nodes = command_nodes if command_nodes else None
+    new_collection = _skip_initial_italics_off_nodes(collection)
 
-    def to_caption_nodes(self):
-        pass
+    new_collection = _skip_empty_text_nodes(new_collection)
 
-    def add_instruction(self, instruction):
-        self.command_nodes.append(instruction)
+    # after this step we're guaranteed a proper ordering of the nodes
+    new_collection = _skip_redundant_italics_nodes(new_collection)
 
-    def __repr__(self):
-        if self.text_node is not None:
-            message = u'"{}"'.format(self.text_node.get_text())
+    # after this, we're guaranteed that the italics are properly contained
+    # within their context
+    new_collection = _close_italics_before_repositioning(new_collection)
+
+    # all nodes will be closed after this step
+    new_collection = _ensure_final_italics_node_closes(new_collection)
+
+    # removes pairs of italics nodes that don't do anything noticeable
+    new_collection = _remove_noop_italics(new_collection)
+
+    return new_collection
+
+
+def _remove_noop_italics(collection):
+    """Return an equivalent list to `collection`. It removes the italics node
+     pairs that don't surround text nodes.
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = []
+    to_commit = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_on():
+            to_commit = node
+            continue
+
+        elif node.is_italics_node() and node.sets_italics_off():
+            if to_commit:
+                to_commit = None
+                continue
         else:
-            message = u"{num} cmds: {cmds}".format(
-                num=len(self.command_nodes),
-                cmds=repr(self.command_nodes)
-            )
+            if to_commit:
+                new_collection.append(to_commit)
+                to_commit = None
 
-        return u"<RNode: {}>".format(message)
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _skip_initial_italics_off_nodes(collection):
+    """Return a collection like the one given, but without the
+    initial <Italics OFF> nodes
+    """
+    new_collection = []
+    can_add_italics_off_nodes = False
+
+    for node in collection:
+        if node.is_italics_node():
+            if node.sets_italics_on():
+                can_add_italics_off_nodes = True
+                new_collection.append(node)
+            elif can_add_italics_off_nodes:
+                new_collection.append(node)
+        else:
+            new_collection.append(node)
+
+    return new_collection
+
+
+def _skip_empty_text_nodes(collection):
+    """Return an iterable containing all the nodes in the previous
+    collection except for the empty text nodes
+    """
+    return [node for node in collection
+            if not (node.is_text_node() and node.is_empty())]
+
+
+def _skip_redundant_italics_nodes(collection):
+    """Return a list where the <Italics On> nodes only appear after
+    <Italics OFF>, and vice versa. This ignores the other node types, and
+    only removes redundant italic nodes
+    """
+    new_collection = []
+    state = None
+
+    for node in collection:
+        if node.is_italics_node():
+            if state is None:
+                state = node.sets_italics_on()
+                new_collection.append(node)
+                continue
+            # skip the nodes that are like the previous
+            if node.sets_italics_on() is state:
+                continue
+            else:
+                state = node.sets_italics_on()
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _close_italics_before_repositioning(collection):
+    """Make sure that for every opened italic node, there's a corresponding
+     closing node.
+
+     Will insert a closing italic node, before each repositioning node
+
+     :type collection: list[_InstructionNode]
+     :rtype: list[_InstructionNode]
+    """
+    new_collection = []
+
+    italics_on = False
+    last_italics_on_node = None
+
+    for idx, node in enumerate(collection):
+        if node.is_italics_node() and node.sets_italics_on():
+            italics_on = True
+            last_italics_on_node = node
+        if node.is_italics_node() and node.sets_italics_off():
+            italics_on = False
+        if node.requires_repositioning() and italics_on:
+            # Append an italics closing node before the position change
+            new_collection.append(
+                _InstructionNode.create_italics_style(
+                    # The position info of this new node should be the same
+                    position=last_italics_on_node.position,
+                    turn_on=False
+                )
+            )
+            new_collection.append(node)
+            # Append an italics opening node after the positioning change
+            new_collection.append(
+                _InstructionNode.create_italics_style(
+                    position=node.position
+                )
+            )
+            continue
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _ensure_final_italics_node_closes(collection):
+    """The final italics command needs to be closed
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = list(collection)
+
+    italics_on = False
+    last_italics_on_node = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_on():
+            italics_on = True
+            last_italics_on_node = node
+        if node.is_italics_node() and node.sets_italics_off():
+            italics_on = False
+
+    if italics_on:
+        new_collection.append(
+            _InstructionNode.create_italics_style(
+                position=last_italics_on_node.position,
+                turn_on=False
+            )
+        )
+    return new_collection

@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
-from pycaption.scc.specialized_collections import RepresentableNodeCreator
+from pycaption.scc.specialized_collections import InstructionNodeCreator
 
 from pycaption import SCCReader, CaptionReadNoCaptions
-from pycaption.scc.state_machines import (DefaultProvidingItalicsTracker,
-                                          DefaultProvidingPositionTracker)
+from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
@@ -212,8 +211,7 @@ class CoverageOnlyTestCase(unittest.TestCase):
 
 class InterpretableNodeCreatorTestCase(unittest.TestCase):
     def test_style_nodes_must_envelop_text_and_generated_linebreaks(self):
-        node_creator = RepresentableNodeCreator(
-            italics_tracker=(DefaultProvidingItalicsTracker()),
+        node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
         # positioning 1
@@ -234,8 +232,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[-1].sets_italics_off())
 
     def test_style_nodes_must_envelop_text_with_different_positioning(self):
-        node_creator = RepresentableNodeCreator(
-            italics_tracker=(DefaultProvidingItalicsTracker()),
+        node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
         # positioning 1
@@ -268,8 +265,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[-1].sets_italics_off())
 
     def test_explicitly_turning_off_italics_when_reusing_positioning(self):
-        node_creator = RepresentableNodeCreator(
-            italics_tracker=(DefaultProvidingItalicsTracker()),
+        node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
         # positioning 1
@@ -292,16 +288,23 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[1].is_italics_node())
         self.assertTrue(result[1].sets_italics_on())
 
-        self.assertTrue(result[-1].is_italics_node())
-        self.assertTrue(result[-1].sets_italics_off())
+        self.assertTrue(result[2].is_explicit_break())
+
+        self.assertTrue(result[3].is_text_node())
+
+        self.assertTrue(result[4].is_italics_node())
+        self.assertTrue(result[4].sets_italics_off())
+
+        self.assertTrue(result[5].is_explicit_break())
+
+        self.assertTrue(result[6].is_text_node())
 
         italics_nodes_count = len(
             [node_ for node_ in result if node_.is_italics_node()])
         self.assertEqual(italics_nodes_count, 2)
 
     def test_explicitly_turning_off_italics_when_changing_positioning(self):
-        node_creator = RepresentableNodeCreator(
-            italics_tracker=(DefaultProvidingItalicsTracker()),
+        node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
         # positioning 1
@@ -333,19 +336,22 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[2].sets_italics_on())
 
         self.assertTrue(result[3].is_text_node())
-        self.assertTrue(result[4].is_italics_node())
-        self.assertTrue(result[4].sets_italics_off())
+        self.assertTrue(result[4].is_text_node())
+        self.assertTrue(result[5].is_text_node())
 
-        self.assertTrue(result[5].requires_repositioning())
-        self.assertTrue(result[6].is_text_node())
+        self.assertTrue(result[6].is_italics_node())
+        self.assertTrue(result[6].sets_italics_off())
 
         self.assertTrue(result[7].requires_repositioning())
-        self.assertTrue(result[8].is_italics_node())
-        self.assertTrue(result[8].sets_italics_on())
+        self.assertTrue(result[8].is_text_node())
 
-        self.assertTrue(result[9].is_text_node())
+        self.assertTrue(result[9].requires_repositioning())
         self.assertTrue(result[10].is_italics_node())
-        self.assertTrue(result[10].sets_italics_off())
+        self.assertTrue(result[10].sets_italics_on())
+
+        self.assertTrue(result[11].is_text_node())
+        self.assertTrue(result[12].is_italics_node())
+        self.assertTrue(result[12].sets_italics_off())
 
 
 SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0

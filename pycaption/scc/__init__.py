@@ -18,26 +18,22 @@ from .constants import (
 )
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    RepresentableNodeCreator)
+    InstructionNodeCreator)
 
-from .state_machines import (
-    DefaultProvidingItalicsTracker,
-    DefaultProvidingPositionTracker
-)
+from .state_machines import DefaultProvidingPositionTracker
 
 
 class NodeCreatorFactory(object):
     """Will return instances of the given node_creator.
 
-    This is used as a means of creating new RepresentableNodeCreator instances,
+    This is used as a means of creating new InstructionNodeCreator instances,
     because these need to share state beyond their garbage collection, but
     storing the information at the class level is not good either, because
     this information must be erased after the reader's .read() operation
     completes.
     """
-    def __init__(self, italics_tracker, position_tracker,
-                 node_creator=RepresentableNodeCreator):
-        self.italics_tracker = italics_tracker
+    def __init__(self, position_tracker,
+                 node_creator=InstructionNodeCreator):
         self.position_tracker = position_tracker
         self.node_creator = node_creator
 
@@ -45,8 +41,7 @@ class NodeCreatorFactory(object):
         """Returns a new instance of self.node_creator, initialized with
         the same italics_tracker, and position_tracker
         """
-        return self.node_creator(italics_tracker=self.italics_tracker,
-                                 position_tracker=self.position_tracker)
+        return self.node_creator(position_tracker=self.position_tracker)
 
     def from_list(self, roll_rows):
         """Wraps the node_creator's method with the same name
@@ -72,7 +67,6 @@ class SCCReader(BaseReader):
         self.time_translator = _SccTimeTranslator()
 
         self.node_creator_factory = NodeCreatorFactory(
-            DefaultProvidingItalicsTracker(),
             DefaultProvidingPositionTracker()
         )
 
