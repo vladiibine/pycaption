@@ -146,6 +146,7 @@ class CaptionCreator(object):
                 continue
 
             elif instruction.requires_repositioning():
+                caption = Caption()
                 caption.start = start
                 caption.end = 0
                 self._still_editing.append(caption)
