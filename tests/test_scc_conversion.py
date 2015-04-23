@@ -138,6 +138,7 @@ Scenarist_SCC V1.0
 """
 
 SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -146,7 +147,8 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
    <region tts:origin="12.5% 86.6666666667%" xml:id="r0"/>
-   <region tts:origin="50.0% 86.6666666667%" xml:id="r1"/>
+   <region tts:origin="25.0% 86.6666666667%" xml:id="r1"/>
+   <region tts:origin="50.0% 86.6666666667%" xml:id="r2"/>
    <region tts:origin="62.5% 86.6666666667%" xml:id="r3"/>
    <region tts:origin="25.0% 93.3333333333%" xml:id="r4"/>
   </layout>
@@ -158,37 +160,24 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
     c!c!
    </p>
    <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
-    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
+    bbbb
+   </p>
+   <p begin="00:01:35.666" end="00:01:40.866" region="r2" style="default">
+    <span tts:fontStyle="italic" region="r2">cccc<br/>
     bbaa</span>
    </p>
-   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
-    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
-    bbaa</span>
+   <p begin="00:01:55.800" end="00:01:55.800" region="r0" style="default">
+    aa
    </p>
-   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
-    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
-    bbaa</span>
-   </p>
-   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
-    aa <span tts:fontStyle="italic" region="r3">bb<br/>
+   <p begin="00:01:55.800" end="00:01:59.533" region="r3" style="default">
+    <span tts:fontStyle="italic" region="r3">bb<br/>
     cc</span>
    </p>
-   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
-    aa <span tts:fontStyle="italic" region="r3">bb<br/>
-    cc</span>
-   </p>
-   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
-    aa <span tts:fontStyle="italic" region="r3">bb<br/>
-    cc</span>
+   <p begin="00:01:59.533" end="00:01:59.533" region="r3" style="default">
+    abcd
    </p>
    <p begin="00:01:59.533" end="00:01:59.533" region="r4" style="default">
-    abcd abcd
-   </p>
-   <p begin="00:01:59.533" end="00:01:59.533" region="r4" style="default">
-    abcd abcd
-   </p>
-   <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
-    dddd
+    abcd
    </p>
    <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
     dddd
