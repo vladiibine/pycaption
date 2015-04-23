@@ -561,7 +561,15 @@ class _InstructionNode(object):
 
 def _format_italics(collection):
     """Given a raw list of _InstructionNodes, returns a new equivalent list
-    where all the italics nodes properly close and open
+    where all the italics nodes properly close and open.
+
+    The list is equivalent in the sense that the SCC commands that would have
+    generated the output list, would have had the exact same visual effect
+    as the ones that generated the output, as far as italics are concerned.
+
+    This is useful because the raw commands read from the SCC can't be used
+    the way they are by the writers for the other formats. Those other writers
+    require the list of CaptionNodes to be formatted in a certain way.
 
     :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
@@ -586,12 +594,13 @@ def _format_italics(collection):
     return new_collection
 
 
-def _remove_noop_italics(collection):
+def _remove_noop_on_off_italics(collection):
     """Return an equivalent list to `collection`. It removes the italics node
-     pairs that don't surround text nodes.
+     pairs that don't surround text nodes, if those nodes are in the order:
+     on, off
 
-    :type collection: list[_InstructionNode]
-    :rtype: list[_InstructionNode]
+    :param collection:
+    :return:
     """
     new_collection = []
     to_commit = None
@@ -611,6 +620,52 @@ def _remove_noop_italics(collection):
                 to_commit = None
 
         new_collection.append(node)
+
+    return new_collection
+
+
+def _remove_noon_off_on_italics(collection):
+    """Removes pairs of off-on italics nodes, that don't surround any other
+    node
+
+    :type collection: list[_InstructionNode]
+    :return: list[_InstructionNode]
+    """
+    new_collection = []
+    to_commit = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_off():
+            to_commit = node
+            continue
+
+        elif node.is_italics_node() and node.sets_italics_on():
+            if to_commit:
+                to_commit = None
+                continue
+        else:
+            if to_commit:
+                new_collection.append(to_commit)
+                to_commit = None
+
+        new_collection.append(node)
+
+    if to_commit:
+        new_collection.append(to_commit)
+
+    return new_collection
+
+
+def _remove_noop_italics(collection):
+    """Return an equivalent list to `collection`. It removes the italics node
+     pairs that don't surround text nodes
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = _remove_noop_on_off_italics(collection)
+
+    new_collection = _remove_noon_off_on_italics(new_collection)
 
     return new_collection
 

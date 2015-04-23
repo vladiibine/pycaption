@@ -210,111 +210,23 @@ class CoverageOnlyTestCase(unittest.TestCase):
 
 
 class InterpretableNodeCreatorTestCase(unittest.TestCase):
-    def test_style_nodes_must_envelop_text_and_generated_linebreaks(self):
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker()))
-
-        # positioning 1
-        node_creator.interpret_command('94d0')  # row 14, col 0
-        node_creator.interpret_command('91ae')  # italics on
-        node_creator.add_chars('a')
-
-        node_creator.interpret_command('9470')  # row 15 col 0
-        node_creator.add_chars('b')
-
-        result = list(node_creator)
-        # First node marks that italics should be on
-        self.assertTrue(result[0].is_italics_node())
-        self.assertTrue(result[0].sets_italics_on())
-
-        # Last node turns off italics
-        self.assertTrue(result[-1].is_italics_node())
-        self.assertTrue(result[-1].sets_italics_off())
-
-    def test_style_nodes_must_envelop_text_with_different_positioning(self):
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker()))
-
-        # positioning 1
-        node_creator.interpret_command('94d0')  # row 14, col 0
-        node_creator.interpret_command('91ae')  # italics on
-        node_creator.add_chars('a')
-
-        node_creator.interpret_command('97d0')  # row 9 col 0
-        node_creator.add_chars('b')
-
-        result = list(node_creator)
-
-        # First node sets italics on
-        self.assertTrue(result[0].is_italics_node())
-        self.assertTrue(result[0].sets_italics_on())
-
-        # After the text node, the next one sets the italics off
-        self.assertTrue(result[2].is_italics_node())
-        self.assertTrue(result[2].sets_italics_off())
-
-        # We then break into a new position
-        self.assertTrue(result[3].requires_repositioning())
-
-        # And immediately set the italics on again
-        self.assertTrue(result[4].is_italics_node())
-        self.assertTrue(result[4].sets_italics_on())
-
-        # The last node should close the italics
-        self.assertTrue(result[-1].is_italics_node())
-        self.assertTrue(result[-1].sets_italics_off())
-
-    def test_explicitly_turning_off_italics_when_reusing_positioning(self):
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker()))
-
-        # positioning 1
-        node_creator.interpret_command('1370')  # row 13, col 0
-        node_creator.interpret_command('9120')  # italics off
-        node_creator.add_chars('a')
-
-        node_creator.interpret_command('94d0')  # row 14 col 0
-        node_creator.interpret_command('91ae')  # italics ON
-        node_creator.add_chars('b')
-        node_creator.interpret_command('9120')  # italics OFF
-
-        node_creator.interpret_command('9470')  # row 15 col 0
-        node_creator.add_chars('c')
-
-        result = list(node_creator)
-
-        self.assertTrue(result[0].is_text_node())
-
-        self.assertTrue(result[1].is_italics_node())
-        self.assertTrue(result[1].sets_italics_on())
-
-        self.assertTrue(result[2].is_explicit_break())
-
-        self.assertTrue(result[3].is_text_node())
-
-        self.assertTrue(result[4].is_italics_node())
-        self.assertTrue(result[4].sets_italics_off())
-
-        self.assertTrue(result[5].is_explicit_break())
-
-        self.assertTrue(result[6].is_text_node())
-
-        italics_nodes_count = len(
-            [node_ for node_ in result if node_.is_italics_node()])
-        self.assertEqual(italics_nodes_count, 2)
-
-    def test_explicitly_turning_off_italics_when_changing_positioning(self):
+    def test_italics_commands_are_formatted_properly(self):
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
         # positioning 1
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
+        node_creator.interpret_command('9120')  # italics off
         node_creator.add_chars('a')
 
         node_creator.interpret_command('9770')  # row 10 col 0
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.add_chars('b')
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('91ae')  # italics ON
         node_creator.interpret_command('91ae')  # italics ON again
         node_creator.add_chars('b')
         node_creator.interpret_command('91ae')  # italics ON again

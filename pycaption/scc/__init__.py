@@ -52,7 +52,6 @@ class NodeCreatorFactory(object):
         """
         return self.node_creator.from_list(
             roll_rows,
-            italics_tracker=self.italics_tracker,
             position_tracker=self.position_tracker
         )
 
