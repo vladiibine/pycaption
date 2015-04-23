@@ -40,10 +40,11 @@ class SCCtoDFXPTestCase(unittest.TestCase):
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
 
     def test_dfxp_is_valid_xml_when_scc_source_has_weird_italic_commands(self):
-        caption_set = SCCReader().read(SAMPLE_SCC_PRODUCED_INVALID_DFXP)
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS)
 
         dfxp = DFXPWriter().write(caption_set)
-        self.fail("Not implemented")
+        self.assertEqual(dfxp, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT)
 
 
 SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
@@ -116,7 +117,7 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_SCC_PRODUCED_INVALID_DFXP = u"""\
+SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS = u"""\
 Scenarist_SCC V1.0
 
 00:01:28;09 9420 942f 94ae 9420 9452 97a2 e3e3 e3e3 e3e3 9470 9723 e3a1 e3a1
@@ -135,3 +136,63 @@ Scenarist_SCC V1.0
 
 00:01:59;14 9420 942f 94ae 9420 94f4 6464 6464
 """
+
+SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:origin="12.5% 86.6666666667%" xml:id="r0"/>
+   <region tts:origin="50.0% 86.6666666667%" xml:id="r1"/>
+   <region tts:origin="62.5% 86.6666666667%" xml:id="r3"/>
+   <region tts:origin="25.0% 93.3333333333%" xml:id="r4"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:01:31.400" end="00:01:35.666" region="r0" style="default">
+    cccccc<br/>
+    c!c!
+   </p>
+   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
+    bbaa</span>
+   </p>
+   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
+    bbaa</span>
+   </p>
+   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+    bbbb <span tts:fontStyle="italic" region="r1">cccc<br/>
+    bbaa</span>
+   </p>
+   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
+    aa <span tts:fontStyle="italic" region="r3">bb<br/>
+    cc</span>
+   </p>
+   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
+    aa <span tts:fontStyle="italic" region="r3">bb<br/>
+    cc</span>
+   </p>
+   <p begin="00:01:55.800" end="00:01:55.800" region="r3" style="default">
+    aa <span tts:fontStyle="italic" region="r3">bb<br/>
+    cc</span>
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.533" region="r4" style="default">
+    abcd abcd
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.533" region="r4" style="default">
+    abcd abcd
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
+    dddd
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
+    dddd
+   </p>
+  </div>
+ </body>
+</tt>"""

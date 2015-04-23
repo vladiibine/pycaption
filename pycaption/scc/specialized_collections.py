@@ -123,6 +123,10 @@ class CaptionCreator(object):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
+        This method relies on the InstructionNodeCreator's ability to generate
+        InstructionNodes properly, so at this point we can convert
+        _InstructionNodes nodes almost 1:1 to CaptionNodes
+
         :type node_buffer: InstructionNodeCreator
 
         :type start: int
@@ -136,102 +140,53 @@ class CaptionCreator(object):
         caption.end = 0  # Not yet known; filled in later
         self._still_editing = [caption]
 
-        open_italic = False
-
-        for element in node_buffer:
+        for instruction in node_buffer:
             # skip empty elements
-            if element.is_empty():
+            if instruction.is_empty():
                 continue
 
-            elif element.requires_repositioning():
-                self._remove_extra_italics(caption)
-                open_italic = False
-                caption = Caption()
+            elif instruction.requires_repositioning():
                 caption.start = start
                 caption.end = 0
                 self._still_editing.append(caption)
 
             # handle line breaks
-            elif element.is_explicit_break():
-                new_nodes = self._translate_break(open_italic)
-                open_italic = False
-                caption.nodes.extend(new_nodes)
+            elif instruction.is_explicit_break():
+                caption.nodes.append(CaptionNode.create_break(
+                    layout_info=_get_layout_from_tuple(instruction.position)
+                ))
 
             # handle open italics
-            elif element.sets_italics_on():
+            elif instruction.sets_italics_on():
                 # add italics
                 caption.nodes.append(
-                    CaptionNode.create_style(True, {u'italics': True}))
-                # open italics, no longer first element
-                open_italic = True
+                    CaptionNode.create_style(
+                        True, {u'italics': True},
+                        layout_info=_get_layout_from_tuple(
+                            instruction.position
+                        ))
+                )
 
             # handle clone italics
-            elif element.sets_italics_off() and open_italic:
+            elif instruction.sets_italics_off():
                 caption.nodes.append(
-                    CaptionNode.create_style(False, {u'italics': True}))
-                open_italic = False
+                    CaptionNode.create_style(
+                        False, {u'italics': True},
+                        layout_info=_get_layout_from_tuple(
+                            instruction.position)
+                    ))
 
             # handle text
-            elif element.is_text_node():
+            elif instruction.is_text_node():
                 # add text
-                layout_info = _get_layout_from_tuple(element.position)
+                layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        element.get_text(), layout_info=layout_info),
+                        instruction.get_text(), layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
-        # close any open italics left over
-        if open_italic:
-            caption.nodes.append(
-                CaptionNode.create_style(False, {u'italics': True}))
-
-        # remove extraneous italics tags in the same caption
-        self._remove_extra_italics(caption)
-
         self._collection.extend(self._still_editing)
-
-    @staticmethod
-    def _translate_break(open_italic):
-        """Depending on the context, translates a line break into one or more
-        nodes, returning them.
-
-        :param open_italic: bool
-        :rtype: tuple
-        """
-        new_nodes = []
-
-        if open_italic:
-            new_nodes.append(CaptionNode.create_style(
-                False, {u'italics': True}))
-
-        # add line break
-        new_nodes.append(CaptionNode.create_break())
-
-        return new_nodes
-
-    @staticmethod
-    def _remove_extra_italics(caption):
-        """Legacy logic slightly refactored. Removes STYLE nodes that would
-        surround a BREAK node.
-
-        See CaptionNode
-
-        :type caption: Caption
-        """
-        i = 0
-        length = max(0, len(caption.nodes) - 2)
-        while i < length:
-            if (caption.nodes[i].type_ == CaptionNode.STYLE and
-                    caption.nodes[i].content[u'italics'] and
-                    caption.nodes[i + 1].type_ == CaptionNode.BREAK and
-                    caption.nodes[i + 2].type_ == CaptionNode.STYLE and
-                    caption.nodes[i + 2].content[u'italics']):
-                # Remove the two italics style nodes
-                caption.nodes.pop(i)
-                caption.nodes.pop(i + 1)
-                length -= 2
-            i += 1
 
     def get_all(self):
         """Returns the Caption collection as a list
@@ -570,6 +525,10 @@ def _format_italics(collection):
     This is useful because the raw commands read from the SCC can't be used
     the way they are by the writers for the other formats. Those other writers
     require the list of CaptionNodes to be formatted in a certain way.
+
+    Note: Using state machines to manage the italics didn't work well because
+    we're using state machines already to track the position, and their
+    interactions got crazy.
 
     :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
