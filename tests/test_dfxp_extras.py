@@ -4,7 +4,10 @@ from bs4 import BeautifulSoup
 
 from pycaption.dfxp import (SinglePositioningDFXPWriter, DFXPReader,
                             DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
-from pycaption.geometry import HorizontalAlignmentEnum, VerticalAlignmentEnum
+from pycaption.geometry import (
+    HorizontalAlignmentEnum, VerticalAlignmentEnum, Layout, Alignment)
+
+from pycaption.dfxp.base import _create_internal_alignment
 
 
 class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
@@ -12,13 +15,11 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
         dfxp = SinglePositioningDFXPWriter().write(caption_set)
-
-        layout = BeautifulSoup(dfxp, features='html.parser').findChild('layout')
+        layout = BeautifulSoup(dfxp, features='html.parser').findChild('layout')  # noqa
 
         self.assertEqual(len(layout.findChildren('region')), 1)
 
     def test_only_the_default_region_is_referenced(self):
-
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
         dfxp = SinglePositioningDFXPWriter().write(caption_set)
@@ -26,10 +27,51 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         soup = BeautifulSoup(dfxp, features='html.parser')
 
         for elem in soup.findAll():
-            if 'region' in elem:
+            if 'region' in elem.attrs:
                 self.assertEqual(elem['region'], DFXP_DEFAULT_REGION_ID)
 
     def test_only_the_custom_region_is_created(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+
+        new_region = Layout(
+            alignment=Alignment(
+                HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP
+            )
+        )
+
+        dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
+        # Using a different parser, because this preserves letter case
+        # The output file is ok, but when parsing it, the "regular" parses
+        # loses letter case.
+        layout = BeautifulSoup(dfxp, features='xml').findChild('layout')
+
+        self.assertEqual(len(layout.findChildren('region')), 1)
+
+        region = layout.findChild('region')
+        text_align = region['tts:textAlign']
+        display_align = region['tts:displayAlign']
+
+        internal_alignment = _create_internal_alignment(text_align, display_align)  # noqa
+        self.assertEqual(internal_alignment.horizontal, HorizontalAlignmentEnum.LEFT)  # noqa
+        self.assertEqual(internal_alignment.vertical, VerticalAlignmentEnum.TOP)  # noqa
+
+    def test_only_the_specified_custom_attributes_are_created_for_the_region(self):  # noqa
+        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+
+        new_region = Layout(
+            alignment=Alignment(
+                HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP
+            )
+        )
+
+        dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
+
+        region = BeautifulSoup(dfxp).find('region')
+        self.assertTrue('xml:id' in region.attrs)
+        self.assertNotEqual(region.attrs['xml:id'], DFXP_DEFAULT_REGION_ID)
+        self.assertEqual(len(region.attrs), 3)
+
+    def test_only_the_custom_region_is_referenced(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
         # it's easier to copy this than create a new one
@@ -39,9 +81,19 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
 
         dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
 
-        layout = BeautifulSoup(dfxp, features='html.parser').findChild('layout')
+        soup = BeautifulSoup(dfxp, features='html.parser')
 
-        self.assertEqual(len(layout.findChildren('region')), 1)
+        # get the region_id created, and see it's the one referenced
+        created_region_id = soup.find('region')['xml:id']
+
+        referenced_region_ids = set()
+
+        for elem in soup.findAll():
+            if 'region' in elem.attrs:
+                referenced_region_ids.add(elem.attrs['region'])
+
+        self.assertEqual(len(referenced_region_ids), 1)
+        self.assertEqual(referenced_region_ids.pop(), created_region_id)
 
 
 SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\

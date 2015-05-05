@@ -1,4 +1,4 @@
-# We thought about making pycaption objects immutable. This would be nice
+# We thought about making pycaption.base objects immutable. This would be nice
 # in a lot of cases, but since the transformations on them could be quite
 # complex, the deepcopy method is good enough sometimes.
 from copy import deepcopy
@@ -24,7 +24,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         captions_set = self._create_single_positioning_caption_set(
             captions_set, self.default_positioning)
 
-        return super(SinglePositioningDFXPWriter, self).write(captions_set, force)
+        return super(SinglePositioningDFXPWriter, self).write(captions_set, force)  # noqa
 
     @staticmethod
     def _create_single_positioning_caption_set(captions_set, positioning):
