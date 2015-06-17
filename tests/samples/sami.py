@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_SAMI_UNICODE = u"""
+SAMPLE_SAMI = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -49,114 +49,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-
-SAMPLE_SAMI_UTF8 = """
-<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
-<!--
-P { margin-left:  1pt;
-    margin-right: 1pt;
-    margin-bottom: 2pt;
-    margin-top: 2pt;
-    text-align: center;
-    font-size: 10pt;
-    font-family: Arial;
-    font-weight: normal;
-    font-style: normal;
-    color: #ffeedd; }
-
-.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
-
---></STYLE></HEAD><BODY>
-<SYNC start="9209"><P class="ENCC">
-       ( clock ticking )
-</P></SYNC>
-<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
-<SYNC start="14848"><P class="ENCC">
-    MAN:<br/>
-    When we think<br/>
-    ♪ ...say bow, wow, ♪
-</P></SYNC>
-<SYNC start="17000"><P class="ENCC">
-  <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
-</P></SYNC>
-<SYNC start="18752"><P class="ENCC">
-    <br/>
-    as an old, wrinkly man<br/>
-    with white hair.
-</P></SYNC>
-<SYNC start="20887"><P class="ENCC">
-    MAN 2:<br/>
-    E equals m c-squared is<br/>
-    not about an old Einstein.
-</P></SYNC>
-<SYNC start="26760"><P class="ENCC">
-    MAN 2:<br/>
-    It's all about an eternal Einstein.
-</P></SYNC>
-<SYNC start="32200"><P class="ENCC">
-    &lt;LAUGHING &amp; WHOOPS!&gt;
-</P></SYNC>
-</BODY></SAMI>
-"""
-
-
-SAMPLE_SAMI = """
-<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
-<!--
-P { margin-left:  1pt;
-    margin-right: 1pt;
-    margin-bottom: 2pt;
-    margin-top: 2pt;
-    text-align: center;
-    font-size: 10pt;
-    font-family: Arial;
-    font-weight: normal;
-    font-style: normal;
-    color: #ffeedd; }
-
-.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
-
---></STYLE></HEAD><BODY>
-<SYNC start="9209"><P class="ENCC">
-       ( clock ticking )
-</P></SYNC>
-<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
-<SYNC start="14848"><P class="ENCC">
-    MAN:<br/>
-    When we think<br/>
-    of "E equals m c-squared",
-</P></SYNC>
-<SYNC start="17000"><P class="ENCC">
-
-
-
-  <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
-</P></SYNC>
-<SYNC start="18752"><P class="ENCC">
-    as an old, wrinkly man<br/>
-    with white hair.
-</P></SYNC>
-<SYNC start="20887"><P class="ENCC">
-    MAN 2:<br/>
-    E equals m c-squared is<br/>
-    not about an old Einstein.
-</P></SYNC>
-<SYNC start="26760"><P class="ENCC">
-    MAN 2:<br/>
-    It's all about an eternal Einstein.
-</P></SYNC>
-<SYNC start="32200"><P class="ENCC">
-    &lt;LAUGHING &amp; WHOOPS!&gt;
-</P></SYNC>
-<SYNC start="34400">
-<P class="ENCC"><br/>some more text
-</P>
-</SYNC>
-</BODY></SAMI>
-"""
-
-
-SAMPLE_SAMI_EMPTY = """
+SAMPLE_SAMI_EMPTY = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -177,7 +70,7 @@ P { margin-left:  1pt;
 """
 
 
-SAMPLE_SAMI_SYNTAX_ERROR = """
+SAMPLE_SAMI_SYNTAX_ERROR = u"""
 <SAMI>
 <Head>
 <title>ir2014_111</title>
@@ -216,7 +109,7 @@ SAMPLE_SAMI_SYNTAX_ERROR = """
 </SAMI>
 """
 
-SAMPLE_SAMI_DOUBLE_BR = """
+SAMPLE_SAMI_DOUBLE_BR = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE>
 </HEAD><BODY>
 <SYNC start="14848"><P class="ENCC">
@@ -224,4 +117,221 @@ SAMPLE_SAMI_DOUBLE_BR = """
     When we think<br/>
     of "E equals m c-squared",
 </BODY></SAMI>
+"""
+
+SAMPLE_SAMI_PARTIAL_MARGINS = u"""
+<SAMI>
+<HEAD>
+   <STYLE TYPE="Text/css">
+   <!--
+      P {margin-left: 29pt; margin-right: 29pt; font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+      .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC;}
+   -->
+   </STYLE>
+</HEAD>
+<BODY>
+   <SYNC START=133>
+      <P CLASS=SUBTTL>>> COMING UP NEXT, IT IS<br>APPLAUSE AMERICA.
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""\
+<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .subttl {
+     lang: en-US;
+     name: "Subtitles";
+     margin-left: 6.04%;
+     margin-bottom: 0%;
+     margin-top: 0%;
+     margin-right: 6.04%;
+     samitype: CC;
+    }
+
+    p {
+     font-size: 24pt;
+     font-family: Tahoma;
+     color: #ffffff;
+     margin-right: 6.04%;
+     margin-bottom: 0%;
+     margin-top: 0%;
+     margin-left: 6.04%;
+     font-weight: bold;
+     background-color: #000;
+     text-align: center;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="133">
+   <p class="subttl" p_style="class:subttl;">
+    &gt;&gt; COMING UP NEXT, IT IS<br/>
+    APPLAUSE AMERICA.
+   </p>
+  </sync>
+ </body>
+</sami>"""
+
+SAMPLE_SAMI_LANG_MARGIN = u"""
+<SAMI>
+<HEAD>
+   <STYLE TYPE="Text/css">
+   <!--
+      P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+      .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+   -->
+   </STYLE>
+</HEAD>
+<BODY>
+   <SYNC START=133>
+      <P CLASS=SUBTTL>>> COMING UP NEXT, IT IS<br>APPLAUSE AMERICA.
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_SPAN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            <SPAN Style="font-size:36pt;">we have this vision of Einstein</SPAN>
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            Some say <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN> as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            Some say <DIV Style="text-align:right;">we have this vision of Einstein</DIV> as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_P_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC" Style="text-align:right;">
+            Some say we have this vision of Einstein as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC" Style="text-align:right;">
+            <SPAN Style="text-align:left;">Some say we have this vision of Einstein as an old, wrinkly man</SPAN>
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            <SPAN Style="text-align:right">Some say </SPAN>
+            <SPAN Style="text-align:left;">we have this vision of Einstein </SPAN>
+            as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_NO_LANG = u"""
+<SAMI>
+<Head><STYLE TYPE="text/css"></Style></Head>
+<BODY>
+<Sync Start=0><P Class=ENCC></p></sync>
+<Sync Start=1301><P Class=ENCC>>> FUNDING FOR OVERHEARD</p></sync>
+</Body>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_LANG = u"""
+<sami>
+<head>
+<style type="text/css"><!--.en-US {lang: en-US;}--></style>
+</head>
+<body>
+<sync start="1301"><p class="en-US">&gt;&gt; FUNDING FOR OVERHEARD</p></sync>
+</body>
+</sami>
 """

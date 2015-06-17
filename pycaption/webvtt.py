@@ -1,5 +1,6 @@
 import sys
 import re
+from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
@@ -8,8 +9,8 @@ from .base import (
 from .geometry import Layout
 
 from .exceptions import (
-    CaptionReadError, CaptionReadSyntaxError,
-    CaptionReadNoCaptions, RelativizationError
+    CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
+    InvalidInputError
 )
 
 # A WebVTT timing line has both start/end times and layout related settings
@@ -54,7 +55,7 @@ class WebVTTReader(BaseReader):
 
     def read(self, content, lang=u'en-US'):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet()
         caption_set.set_captions(lang, self._parse(content.splitlines()))
@@ -188,15 +189,6 @@ class WebVTTWriter(BaseWriter):
     video_width = None
     video_height = None
 
-    def __init__(self, *args, **kwargs):
-        self.video_width = kwargs.pop('video_width', None)
-        self.video_height = kwargs.pop('video_height', None)
-        # If this is True, the WebVTTWriter will try to relativize
-        # absolute positioning but will leave it blank on failure
-        # instead of raising an exception.
-        self.bypass_relativization_errors = kwargs.pop(
-            'bypass_relativization_errors', False)
-
     def write(self, caption_set):
         """
         :type caption_set: CaptionSet
@@ -205,6 +197,8 @@ class WebVTTWriter(BaseWriter):
 
         if caption_set.is_empty():
             return output
+
+        caption_set = deepcopy(caption_set)
 
         # TODO: styles. These go into a separate CSS file, which doesn't really
         # fit the API here. Figure that out.  Though some style stuff can be
@@ -271,15 +265,29 @@ class WebVTTWriter(BaseWriter):
         cue_width = None
         alignment = None
 
-        # Ensure that all positioning values are measured using percentage
-        try:
-            layout.to_percentage_of(self.video_width, self.video_height)
-        except RelativizationError as e:
-            if self.bypass_relativization_errors:
-                # Don't include any positioning settings for this cue
-                return u''
+        already_relative = False
+        if not self.relativize:
+            if layout.is_relative():
+                already_relative = True
             else:
-                raise e
+                # There are absolute positioning values for this cue but the
+                # Writer is explicitly configured not to do any relativization.
+                # Ignore all positioning for this cue.
+                return u''
+
+        # Ensure that all positioning values are measured using percentage.
+        # This may raise an exception if layout.is_relative() == False
+        # If you want to avoid it, you have to turn off relativization by
+        # initializing this Writer with relativize=False.
+        if not already_relative:
+            layout = layout.as_percentage_of(
+                self.video_width, self.video_height)
+
+        # Ensure that when there's a left offset the caption is not pushed out
+        # of the screen. If the execution got this far it means origin and
+        # extent are already relative by now.
+        if self.fit_to_screen:
+            layout = layout.fit_to_screen()
 
         if layout.origin:
             left_offset = layout.origin.x
@@ -316,7 +324,7 @@ class WebVTTWriter(BaseWriter):
 
         cue_settings = u''
 
-        if alignment:
+        if alignment and alignment != u'middle':
             cue_settings += u" align:" + alignment
         if left_offset:
             cue_settings += u" position:{},start".format(unicode(left_offset))
@@ -345,17 +353,16 @@ class WebVTTWriter(BaseWriter):
         # escaped before being appended to this string)
         s = u''
         for i, node in enumerate(nodes):
-            already_appended = False
             if node.type_ == CaptionNode.TEXT:
-                if s and not node.layout_info == current_layout:
+                if s and current_layout and node.layout_info != current_layout:
                     # If the positioning changes from one text node to
                     # another, a new WebVTT cue has to be created.
                     layout_groups.append((s, current_layout))
-                    already_appended = True
                     s = u''
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
                 s += self._encode(node.content) or u'&nbsp;'
+                current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
                 # TODO: Refactor pycaption and eliminate the concept of a
                 # "Style node"
@@ -363,12 +370,11 @@ class WebVTTWriter(BaseWriter):
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += u'&nbsp;'
-                if i == 0:
+                if i == 0:  # cue text starts with a break
                     s += u'&nbsp;'
                 s += u'\n'
-            current_layout = node.layout_info
 
-        if not already_appended:
+        if s:
             layout_groups.append((s, current_layout))
         return layout_groups
 

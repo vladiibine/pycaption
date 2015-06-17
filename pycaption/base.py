@@ -47,8 +47,41 @@ class BaseReader(object):
 
 
 class BaseWriter(object):
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, relativize=True, video_width=None, video_height=None,
+                 fit_to_screen=True):
+        """
+        Initialize writer with the given parameters.
+
+        :param relativize: If True (default), converts absolute positioning
+            values (e.g. px) to percentage. ATTENTION: WebVTT does not support
+            absolute positioning. If relativize is set to False and it finds
+            an absolute positioning parameter for a given caption, it will
+            ignore all positioning for that cue and show it in the default
+            position.
+        :param video_width: The width of the video for which the captions being
+            converted were made. This is necessary for relativization.
+        :param video_height: The height of the video for which the captions
+            being converted were made. This is necessary for relativization.
+        :param fit_to_screen: If extent is not set or if origin + extent > 100%,
+            (re)calculate it based on origin. It is a pycaption fix for caption
+            files that are technically valid but contains inconsistent settings
+            that may cause long captions to be cut out of the screen.
+        """
+        self.relativize = relativize
+        self.video_width = video_width
+        self.video_height = video_height
+        self.fit_to_screen = fit_to_screen
+
+    def _relativize_and_fit_to_screen(self, layout_info):
+        if layout_info:
+            if self.relativize:
+                # Transform absolute values (e.g. px) into percentages
+                layout_info = layout_info.as_percentage_of(
+                    self.video_width, self.video_height)
+            if self.fit_to_screen:
+                # Make sure origin + extent <= 100%
+                layout_info = layout_info.fit_to_screen()
+        return layout_info
 
     def write(self, content):
         return content
@@ -63,6 +96,12 @@ class CaptionNode(object):
     """
     A single node within a caption, representing either
     text, a style, or a linebreak.
+
+    Rules:
+        1. All nodes should have the property layout_info set.
+        The value None means specifically that no positioning information
+        should be specified. Each reader is to supply its own default
+        values (if necessary) when reading their respective formats.
     """
 
     TEXT = 1
@@ -189,6 +228,9 @@ class CaptionSet(object):
     def __init__(self):
         self._styles = {}
 
+        # Base layout to be inherited by all languages
+        self.layout_info = None
+
         # For individual languages, represents inheritable layout-related
         # information
         self._layout_info = {}
@@ -205,11 +247,21 @@ class CaptionSet(object):
     def get_captions(self, lang):
         return self._captions.get(lang, [])
 
-    def add_style(self, id, style):
-        self._styles[id] = style
+    def add_style(self, selector, rules):
+        """
+        :param selector: The selector indicating the elements to which the
+            rules should be applied.
+        :param rules: A dictionary with CSS-like styling rules.
+        """
+        self._styles[selector] = rules
 
-    def get_style(self, style):
-        return self._styles.get(style, [])
+    def get_style(self, selector):
+        """
+        Returns a dictionary with CSS-like styling rules for a given selector.
+        :param selector: The selector whose rules should be returned (e.g. an
+            element or class name).
+        """
+        return self._styles.get(selector, [])
 
     def get_styles(self):
         return self._styles.items()
@@ -245,3 +297,48 @@ class CaptionSet(object):
                 if caption.start >= 0:
                     out_captions.append(caption)
             self.set_captions(lang, out_captions)
+
+# Functions
+def merge_concurrent_captions(caption_set):
+    """Merge captions that have the same start and end times"""
+    for lang in caption_set.get_languages():
+        captions = caption_set.get_captions(lang)
+        last_caption = None
+        concurrent_captions = []
+        merged_captions = []
+        for caption in captions:
+            if last_caption:
+                last_timespan = last_caption.start, last_caption.end
+                current_timespan = caption.start, caption.end
+                if current_timespan == last_timespan:
+                    concurrent_captions.append(caption)
+                    last_caption = caption
+                    continue
+                else:
+                    merged_captions.append(merge(concurrent_captions))
+            concurrent_captions = [caption]
+            last_caption = caption
+
+        if concurrent_captions:
+            merged_captions.append(merge(concurrent_captions))
+        if merged_captions:
+            caption_set.set_captions(lang, merged_captions)
+    return caption_set
+
+def merge(captions):
+    """
+    Merge list of captions into one caption. The start/end times from the first
+    caption are kept.
+    """
+    new_nodes = []
+    for caption in captions:
+        if new_nodes:
+            new_nodes.append(CaptionNode.create_break())
+        for node in caption.nodes:
+            new_nodes.append(node)
+    caption = Caption()
+    caption.start = captions[0].start
+    caption.end = captions[0].end
+    caption.style = captions[0].style
+    caption.nodes = new_nodes
+    return caption
